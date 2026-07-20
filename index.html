@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZBH Pan & Plate – Recipe Finder</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="logo" data-page="home">
+        <span class="logo-icon">🍳</span>
+        <span class="logo-text">ZBH Pan <span class="amp">&</span> Plate</span>
+      </a>
+      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#" class="nav-link active" data-page="home">Home</a></li>
+        <li><a href="#" class="nav-link" data-page="browse">Browse Recipes</a></li>
+        <li><a href="#" class="nav-link" data-page="favorites">Favorites</a></li>
+        <li><a href="#" class="nav-link" data-page="fridge">Fridge Finder</a></li>
+        <li><a href="#" class="nav-link" data-page="about">About</a></li>
+        <li><a href="#" class="nav-link" data-page="contact">Contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <div class="auth-buttons" id="authButtons">
+          <button class="btn btn-sm btn-secondary" id="loginBtn">Login</button>
+          <button class="btn btn-sm btn-primary" id="signupBtn">Sign Up</button>
+        </div>
+        <div class="user-menu" id="userMenu" style="display:none;">
+          <button class="user-menu-btn" id="userMenuBtn">
+            <span class="user-avatar" id="userAvatar">👤</span>
+            <span class="user-name" id="userName">User</span>
+            <span class="user-arrow">▼</span>
+          </button>
+          <div class="user-dropdown" id="userDropdown" style="display:none;">
+            <div class="user-dropdown-header">
+              <span class="user-avatar-large" id="userAvatarLarge">👤</span>
+              <div>
+                <div class="user-dropdown-name" id="userDropdownName">User Name</div>
+                <div class="user-dropdown-email" id="userDropdownEmail">user@email.com</div>
+                <div class="user-dropdown-region" id="userDropdownRegion">Region</div>
+              </div>
+            </div>
+            <div class="user-dropdown-divider"></div>
+            <button class="user-dropdown-item" id="logoutBtn">🚪 Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <section class="page page-home active" id="page-home">
+      <div class="hero">
+        <div class="hero-content">
+          <h1 class="hero-title">Discover Delicious Recipes</h1>
+          <p class="hero-subtitle">From Pakistani biryanis to Chinese stir-fries — find your next meal at <strong>ZBH Pan & Plate</strong>.</p>
+          <div class="hero-search">
+            <input type="text" class="search-input" id="heroSearch" placeholder="Search recipes, ingredients, cuisines...">
+            <button class="search-btn" id="heroSearchBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </button>
+          </div>
+          <div class="hero-filters">
+            <select class="filter-select" id="heroCuisineFilter">
+              <option value="">All Cuisines</option>
+              <option value="Pakistani">Pakistani</option>
+              <option value="Chinese">Chinese</option>
+              <option value="International">International</option>
+            </select>
+            <select class="filter-select" id="heroCategoryFilter">
+              <option value="">All Categories</option>
+              <option value="Rice">Rice</option>
+              <option value="Curry">Curry</option>
+              <option value="BBQ">BBQ</option>
+              <option value="Noodles">Noodles</option>
+              <option value="Main Course">Main Course</option>
+              <option value="Soup">Soup</option>
+              <option value="Appetizer">Appetizer</option>
+              <option value="Salad">Salad</option>
+              <option value="Dessert">Dessert</option>
+            </select>
+            <select class="filter-select" id="heroDifficultyFilter">
+              <option value="">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="container">
+        <h2 class="section-title" id="homeRecipeTitle">Featured Recipes</h2>
+        <div class="recipe-grid" id="homeRecipeGrid"></div>
+        <div class="empty-state" id="homeEmpty" style="display:none;">
+          <p>No recipes match your filters. Try adjusting your search.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="page page-browse" id="page-browse">
+      <div class="container">
+        <h1 class="page-title">Browse All Recipes</h1>
+        <div class="browse-controls">
+          <div class="search-box">
+            <input type="text" class="search-input" id="browseSearch" placeholder="Search by name, ingredient or cuisine...">
+            <button class="search-btn" id="browseSearchBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </button>
+          </div>
+          <div class="filter-group">
+            <select class="filter-select" id="browseCuisine">
+              <option value="">All Cuisines</option>
+              <option value="Pakistani">Pakistani</option>
+              <option value="Chinese">Chinese</option>
+              <option value="International">International</option>
+            </select>
+            <select class="filter-select" id="browseCategory">
+              <option value="">All Categories</option>
+              <option value="Rice">Rice</option>
+              <option value="Curry">Curry</option>
+              <option value="BBQ">BBQ</option>
+              <option value="Noodles">Noodles</option>
+              <option value="Main Course">Main Course</option>
+              <option value="Soup">Soup</option>
+              <option value="Appetizer">Appetizer</option>
+              <option value="Salad">Salad</option>
+              <option value="Dessert">Dessert</option>
+            </select>
+            <select class="filter-select" id="browseDifficulty">
+              <option value="">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+            <select class="filter-select" id="browseSort">
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="calories-asc">Calories (Low-High)</option>
+              <option value="calories-desc">Calories (High-Low)</option>
+              <option value="prep-asc">Prep Time (Short-Long)</option>
+              <option value="cook-asc">Cook Time (Short-Long)</option>
+            </select>
+          </div>
+          <div class="browse-stats" id="browseStats"></div>
+        </div>
+        <div class="recipe-grid" id="browseRecipeGrid"></div>
+        <div class="empty-state" id="browseEmpty" style="display:none;">
+          <p>No recipes found. Try a different search or filter.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="page page-favorites" id="page-favorites">
+      <div class="container">
+        <h1 class="page-title">Your Favorites</h1>
+        <p class="page-subtitle" id="favCount">0 recipes saved</p>
+        <div class="recipe-grid" id="favoritesGrid"></div>
+        <div class="empty-state" id="favoritesEmpty" style="display:none;">
+          <p>You haven't saved any favorites yet. Browse recipes and click the heart icon to add them here.</p>
+          <button class="btn btn-primary" id="goBrowseBtn">Browse Recipes</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="page page-fridge" id="page-fridge">
+      <div class="container">
+        <h1 class="page-title">Fridge Finder</h1>
+        <p class="page-subtitle">Enter the ingredients you have, and we will find the best recipes you can make right now.</p>
+        <div class="fridge-panel">
+          <div class="fridge-input-row">
+            <input type="text" class="search-input" id="fridgeInput" placeholder="Type an ingredient and press Enter (e.g. chicken, rice, tomato)..." autocomplete="off">
+            <button class="search-btn" id="fridgeAddBtn" aria-label="Add ingredient">+</button>
+          </div>
+          <div class="fridge-tags" id="fridgeTags"></div>
+          <div class="fridge-actions">
+            <button class="btn btn-primary" id="fridgeFindBtn">Find Recipes</button>
+            <button class="btn btn-secondary" id="fridgeClearBtn">Clear</button>
+          </div>
+          <p class="fridge-hint">Add between 2 and 10 ingredients for the best matches.</p>
+        </div>
+        <div class="recipe-grid" id="fridgeRecipeGrid"></div>
+        <div class="empty-state" id="fridgeEmpty" style="display:none;">
+          <p>No recipes match your ingredients. Try adding or removing an ingredient.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="page page-about" id="page-about">
+      <div class="container">
+        <h1 class="page-title">About ZBH Pan & Plate</h1>
+        <div class="about-content">
+          <div class="about-card">
+            <h2>Our Mission</h2>
+            <p>ZBH Pan & Plate was created to bring the joy of cooking to everyone. Whether you're a beginner looking for easy weeknight dinners or an experienced cook seeking to master complex dishes, our curated collection of recipes has something for you.</p>
+          </div>
+          <div class="about-card">
+            <h2>What We Offer</h2>
+            <ul>
+              <li><strong>Pakistani Cuisine:</strong> From aromatic biryanis and rich curries to sizzling kebabs and traditional stews.</li>
+              <li><strong>Chinese Cuisine:</strong> Stir-fries, noodles, soups, and classic dishes with authentic flavours.</li>
+              <li><strong>International Favorites:</strong> A growing collection of globally loved recipes.</li>
+            </ul>
+          </div>
+          <div class="about-card">
+            <h2>Features</h2>
+            <ul>
+              <li>Detailed step-by-step instructions</li>
+              <li>Nutrition information for every recipe</li>
+              <li>Difficulty ratings and prep/cook times</li>
+              <li>Save your favorite recipes</li>
+              <li>Powerful search and filtering</li>
+              <li>Dark mode support</li>
+            </ul>
+          </div>
+          <div class="about-card">
+            <h2>Technology</h2>
+            <p>Built with vanilla HTML5, CSS3, and JavaScript (ES6+). No frameworks, no dependencies — just clean, fast, and accessible code that works in any modern browser.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page page-contact" id="page-contact">
+      <div class="container">
+        <h1 class="page-title">Contact Us</h1>
+        <div class="contact-wrapper">
+          <div class="contact-info">
+            <h2>Get In Touch</h2>
+            <p>Have a question, suggestion, or feedback? We'd love to hear from you.</p>
+            <div class="contact-item">
+              <span class="contact-icon">📧</span>
+              <span>hello@zbhpanandplate.com</span>
+            </div>
+            <div class="contact-item">
+              <span class="contact-icon">📍</span>
+              <span>Karachi, Pakistan</span>
+            </div>
+          </div>
+          <form class="contact-form" id="contactForm">
+            <div class="form-group">
+              <label for="contactName">Name</label>
+              <input type="text" id="contactName" name="name" required placeholder="Your name">
+            </div>
+            <div class="form-group">
+              <label for="contactEmail">Email</label>
+              <input type="email" id="contactEmail" name="email" required placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+              <label for="contactMessage">Message</label>
+              <textarea id="contactMessage" name="message" rows="5" required placeholder="How can we help?"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Send Message</button>
+            <div class="form-success" id="contactSuccess" style="display:none;">
+              <p>Thank you! Your message has been sent.</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 ZBH Pan & Plate. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Auth Modals -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-container auth-modal-container" id="authModalContainer">
+      <button class="modal-close auth-modal-close" id="authModalClose">&times;</button>
+      <div class="modal-body" id="authModalBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="recipeModal">
+    <div class="modal-container" id="modalContainer">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+    
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+  <!-- Firebase Configuration -->
+  <script src="js/firebase-config.js"></script>
+
+  <!-- Your Existing Files -->
+  <script src="js/data.js"></script>
+  <script src="js/recipes.js"></script>
+  <script src="js/recipes-pk1.js"></script>
+  <script src="js/recipes-pk2.js"></script>
+  <script src="js/recipes-pk3.js"></script>
+  <script src="js/recipes-pk4.js"></script>
+  <script src="js/recipes-cn1.js"></script>
+  <script src="js/recipes-cn2.js"></script>
+  <script src="js/recipes-pk5.js"></script>
+  <script src="js/recipes-cn3.js"></script>
+  <script src="js/recipes-in.js"></script>
+  <script src="js/recipes-it.js"></script>
+  <script src="js/recipes-tr.js"></script>
+  <script src="js/recipes-ar.js"></script>
+  <script src="js/recipes-mx.js"></script>
+  <script src="js/recipes-us.js"></script>
+  <script src="js/recipes-th.js"></script>
+  <script src="js/recipes-jp.js"></script>
+  <script src="js/recipes-kr.js"></script>
+  <script src="js/recipes-intl.js"></script>
+
+  <!-- Main Script -->
+  <script src="script.js"></script>
+
+  <!-- Auth Module (loads after main script so it can integrate) -->
+  <script src="js/auth.js"></script>
+</body>
+</html>
