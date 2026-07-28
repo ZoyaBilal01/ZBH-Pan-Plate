@@ -21,7 +21,7 @@ const INGREDIENT_CATEGORIES = {
 const CATEGORY_THEME = {
   "Pakistani": { color: "linear-gradient(135deg,#f7971e,#ffd200)", emoji: "\uD83C\uDF5B" },
   "Chinese":   { color: "linear-gradient(135deg,#ee0979,#ff6a00)", emoji: "\uD83C\uDF5C" },
-  "International": { color: "linear-gradient(135deg,#11998e,#38ef7d)", emoji: "\uD83C\uDF55" },
+  "International": { color: "linear-gradient(135deg,#11998e,#38ef7d)", emoji: "🍽️" },
   "Soup":      { color: "linear-gradient(135deg,#c94b4b,#4b134f)", emoji: "\uD83C\uDF72" },
   "Salad":     { color: "linear-gradient(135deg,#56ab2f,#a8e063)", emoji: "\uD83E\uDD57" },
   "Dessert":   { color: "linear-gradient(135deg,#f857a6,#ff5858)", emoji: "\uD83C\uDF70" }

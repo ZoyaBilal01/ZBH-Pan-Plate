@@ -187,8 +187,6 @@ const RECIPE_IMAGE_MAP = {
   "Tabbouleh": "https://th.bing.com/th/id/OIP.x4BxFu115gh4cXFzeCjUpwHaHa?w=195&h=195&c=7&r=0&o=7&pid=1.7&rm=3",
   "Tacos al Pastor": "https://th.bing.com/th/id/OIP.ZiHzKZXbOYPcipnDZEyg8gHaHa?w=184&h=184&c=7&r=0&o=7&pid=1.7&rm=3",
   "Tamales": "https://th.bing.com/th/id/OIP.78dMz8P01ITN6EDYd_uGhQHaHa?w=198&h=198&c=7&r=0&o=7&pid=1.7&rm=3",
-  "Tandoori Chicken": "https://th.bing.com/th/id/OIP.Zs0hIiF2qbzBq4zKAeNwTQHaLH?w=195&h=293&c=7&r=0&o=7&pid=1.7&rm=3",
-  "Tempura": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&q=80",
   "Thai Basil Chicken": "https://th.bing.com/th/id/OIP.ra6DhoQWflk94FeX2vF-pAHaLH?w=195&h=293&c=7&r=0&o=7&pid=1.7&rm=3",
   "Thai Fried Rice": "https://th.bing.com/th/id/OIP.XvVGDxQ5pxlu5OQSAwRhKAHaLH?w=195&h=292&c=7&r=0&o=7&pid=1.7&rm=3",
   "Tiramisu": "https://th.bing.com/th/id/OIP.8-hIBxuk2aR5lmY7CHN38wHaE7?w=291&h=194&c=7&r=0&o=7&pid=1.7&rm=3",
