@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZBH Pan & Plate – Recipe Finder</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <main class="main-content">
+    <section class="page page-home active" id="page-home">
+      <div class="hero">
+        <div class="hero-content">
+          <h1 class="hero-title">Discover Delicious Recipes</h1>
+          <p class="hero-subtitle">From Pakistani biryanis to Chinese stir-fries — find your next meal at <strong>ZBH Pan & Plate</strong>.</p>
+          <div class="hero-search">
+            <input type="text" class="search-input" id="heroSearch" placeholder="Search recipes, ingredients, cuisines...">
+            <button class="search-btn" id="heroSearchBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </button>
+          </div>
+          <div class="hero-filters">
+            <select class="filter-select" id="heroCuisineFilter">
+              <option value="">All Cuisines</option>
+              <option value="Pakistani">Pakistani</option>
+              <option value="Chinese">Chinese</option>
+              <option value="International">International</option>
+            </select>
+            <select class="filter-select" id="heroCategoryFilter">
+              <option value="">All Categories</option>
+              <option value="Rice">Rice</option>
+              <option value="Curry">Curry</option>
+              <option value="BBQ">BBQ</option>
+              <option value="Noodles">Noodles</option>
+              <option value="Main Course">Main Course</option>
+              <option value="Soup">Soup</option>
+              <option value="Appetizer">Appetizer</option>
+              <option value="Salad">Salad</option>
+              <option value="Dessert">Dessert</option>
+            </select>
+            <select class="filter-select" id="heroDifficultyFilter">
+              <option value="">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="category-section">
+        <div class="category-grid" id="categoryGrid"></div>
+      </div>
+      <div class="container">
+        <h2 class="section-title" id="homeRecipeTitle">Featured Recipes</h2>
+        <div class="recipe-grid" id="homeRecipeGrid"></div>
+        <div class="empty-state" id="homeEmpty" style="display:none;">
+          <p>No recipes match your filters. Try adjusting your search.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-placeholder"></div>
+  <div id="modals-placeholder"></div>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+  <!-- Firebase Configuration -->
+  <script src="js/firebase-config.js"></script>
+
+  <!-- Data Layer -->
+  <script src="js/data.js"></script>
+  <script src="js/recipes.js"></script>
+  <script src="js/recipeImages.js"></script>
+  <script src="js/recipes-pk1.js"></script>
+  <script src="js/recipes-pk2.js"></script>
+  <script src="js/recipes-pk3.js"></script>
+  <script src="js/recipes-pk4.js"></script>
+  <script src="js/recipes-pk5.js"></script>
+  <script src="js/recipes-cn1.js"></script>
+  <script src="js/recipes-cn2.js"></script>
+  <script src="js/recipes-cn3.js"></script>
+  <script src="js/recipes-in.js"></script>
+  <script src="js/recipes-it.js"></script>
+  <script src="js/recipes-tr.js"></script>
+  <script src="js/recipes-ar.js"></script>
+  <script src="js/recipes-mx.js"></script>
+  <script src="js/recipes-us.js"></script>
+  <script src="js/recipes-th.js"></script>
+  <script src="js/recipes-jp.js"></script>
+  <script src="js/recipes-kr.js"></script>
+  <script src="js/recipes-intl.js"></script>
+
+  <!-- Auth Module -->
+  <script src="js/auth.js"></script>
+
+  <!-- Shared Components -->
+  <script src="js/common.js"></script>
+
+  <!-- Home Page Logic -->
+  <script src="js/main.js"></script>
+</body>
+</html>
