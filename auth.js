@@ -5,25 +5,24 @@
 (function () {
   'use strict';
 
+  if (typeof firebase === 'undefined') {
+    console.warn('Firebase is not available. Authentication features are disabled.');
+    window.Auth = window.Auth || {};
+    window.Auth.isLoggedIn = () => false;
+    window.Auth.getUser = () => null;
+    window.Auth.getUserName = () => null;
+    window.Auth.getUserEmail = () => null;
+    window.Auth.getUserId = () => null;
+    window.Auth.openLogin = () => {};
+    window.Auth.openSignup = () => {};
+    window.Auth.logout = () => {};
+    window.Auth.syncFavorites = () => Promise.resolve();
+    window.Auth.onFavoritesUpdated = () => {};
+    return;
+  }
+
   const auth = firebase.auth();
   const database = firebase.database();
-
-  const authModal = document.getElementById('authModal');
-  const authModalBody = document.getElementById('authModalBody');
-  const authModalClose = document.getElementById('authModalClose');
-  const authButtons = document.getElementById('authButtons');
-  const userMenu = document.getElementById('userMenu');
-  const userMenuBtn = document.getElementById('userMenuBtn');
-  const userDropdown = document.getElementById('userDropdown');
-  const userName = document.getElementById('userName');
-  const userAvatar = document.getElementById('userAvatar');
-  const userDropdownName = document.getElementById('userDropdownName');
-  const userDropdownEmail = document.getElementById('userDropdownEmail');
-  const userDropdownRegion = document.getElementById('userDropdownRegion');
-  const userAvatarLarge = document.getElementById('userAvatarLarge');
-  const loginBtn = document.getElementById('loginBtn');
-  const signupBtn = document.getElementById('signupBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
 
   let currentAuthView = 'login';
   let favoritesSynced = false;
@@ -40,6 +39,9 @@
 
   /* -------------------- UI Updates -------------------- */
   function updateUIForLoggedInUser(user) {
+    const authButtons = document.getElementById('authButtons');
+    const userMenu = document.getElementById('userMenu');
+
     if (authButtons) authButtons.style.display = 'none';
     if (userMenu) userMenu.style.display = 'flex';
 
@@ -47,25 +49,34 @@
     const email = user.email || '';
     const initial = displayName.charAt(0).toUpperCase();
 
-    if (userName) userName.textContent = displayName;
-    if (userAvatar) userAvatar.textContent = initial;
-    if (userDropdownName) userDropdownName.textContent = displayName;
-    if (userDropdownEmail) userDropdownEmail.textContent = email;
-    if (userAvatarLarge) userAvatarLarge.textContent = initial;
+    const userNameEl = document.getElementById('userName');
+    const userAvatarEl = document.getElementById('userAvatar');
+    const userAvatarLargeEl = document.getElementById('userAvatarLarge');
+    const userDropdownNameEl = document.getElementById('userDropdownName');
+    const userDropdownEmailEl = document.getElementById('userDropdownEmail');
+    if (userNameEl) userNameEl.textContent = displayName;
+    if (userAvatarEl) userAvatarEl.textContent = initial;
+    if (userDropdownNameEl) userDropdownNameEl.textContent = displayName;
+    if (userDropdownEmailEl) userDropdownEmailEl.textContent = email;
+    if (userAvatarLargeEl) userAvatarLargeEl.textContent = initial;
 
+    const userDropdownRegionEl = document.getElementById('userDropdownRegion');
     database.ref('users/' + user.uid + '/profile').once('value').then((snapshot) => {
       const data = snapshot.val();
       if (data && data.region) {
-        if (userDropdownRegion) userDropdownRegion.textContent = data.region;
+        if (userDropdownRegionEl) userDropdownRegionEl.textContent = data.region;
       } else {
-        if (userDropdownRegion) userDropdownRegion.textContent = 'Unknown';
+        if (userDropdownRegionEl) userDropdownRegionEl.textContent = 'Unknown';
       }
     }).catch(() => {
-      if (userDropdownRegion) userDropdownRegion.textContent = 'Unknown';
+      if (userDropdownRegionEl) userDropdownRegionEl.textContent = 'Unknown';
     });
   }
 
   function updateUIForLoggedOutUser() {
+    const authButtons = document.getElementById('authButtons');
+    const userMenu = document.getElementById('userMenu');
+    const userDropdown = document.getElementById('userDropdown');
     if (authButtons) authButtons.style.display = 'flex';
     if (userMenu) userMenu.style.display = 'none';
     if (userDropdown) userDropdown.style.display = 'none';
@@ -100,17 +111,22 @@
   function openAuthModal(view) {
     currentAuthView = view || 'login';
     renderAuthModal();
-    authModal.classList.add('open');
+    const authModal = document.getElementById('authModal');
+    if (authModal) authModal.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
   function closeAuthModal() {
-    authModal.classList.remove('open');
+    const authModal = document.getElementById('authModal');
+    if (authModal) authModal.classList.remove('open');
     document.body.style.overflow = '';
-    authModalBody.innerHTML = '';
+    const authModalBody = document.getElementById('authModalBody');
+    if (authModalBody) authModalBody.innerHTML = '';
   }
 
   function renderAuthModal() {
+    const authModalBody = document.getElementById('authModalBody');
+    if (!authModalBody) return;
     if (currentAuthView === 'login') {
       renderLoginForm();
     } else if (currentAuthView === 'signup') {
@@ -122,6 +138,8 @@
 
   /* -------------------- Login Form -------------------- */
   function renderLoginForm() {
+    const authModalBody = document.getElementById('authModalBody');
+    if (!authModalBody) return;
     authModalBody.innerHTML = `
       <div class="auth-header">
         <h2>Welcome Back</h2>
@@ -165,6 +183,8 @@
 
   /* -------------------- Signup Form -------------------- */
   function renderSignupForm() {
+    const authModalBody = document.getElementById('authModalBody');
+    if (!authModalBody) return;
     authModalBody.innerHTML = `
       <div class="auth-header">
         <h2>Create Account</h2>
@@ -240,6 +260,8 @@
 
   /* -------------------- Forgot Password Form -------------------- */
   function renderForgotForm() {
+    const authModalBody = document.getElementById('authModalBody');
+    if (!authModalBody) return;
     authModalBody.innerHTML = `
       <div class="auth-header">
         <h2>Reset Password</h2>
@@ -267,6 +289,8 @@
 
   /* -------------------- Form Event Binding -------------------- */
   function bindAuthFormEvents(view) {
+    const authModalBody = document.getElementById('authModalBody');
+    if (!authModalBody) return;
     const passwordToggles = authModalBody.querySelectorAll('.password-toggle');
     passwordToggles.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -564,10 +588,9 @@
       'auth/credential-already-in-use': 'Credential already in use',
       'auth/popup-closed-by-user': 'Popup closed by user',
       'auth/popup-blocked': 'Popup blocked by browser',
-      'auth/cancelled-popup-request': 'Cancelled popup request',
+      'auth/cancelled-popup-request': 'Sign-in cancelled',
       'auth/internal-error': 'Internal error. Please try again',
-      'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method',
-      'auth/cancelled-popup-request': 'Sign-in cancelled'
+      'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method'
     };
     return messages[code] || 'An error occurred. Please try again.';
   }
@@ -583,44 +606,6 @@
       if (toast.parentNode) toast.parentNode.removeChild(toast);
     }, 3000);
   }
-
-  /* -------------------- Event Bindings -------------------- */
-  if (loginBtn) {
-    loginBtn.addEventListener('click', () => openAuthModal('login'));
-  }
-  if (signupBtn) {
-    signupBtn.addEventListener('click', () => openAuthModal('signup'));
-  }
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
-  if (authModalClose) {
-    authModalClose.addEventListener('click', closeAuthModal);
-  }
-  if (authModal) {
-    authModal.addEventListener('click', (e) => {
-      if (e.target === authModal) closeAuthModal();
-    });
-  }
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && authModal && authModal.classList.contains('open')) {
-      closeAuthModal();
-    }
-  });
-
-  if (userMenuBtn) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = userDropdown && userDropdown.style.display === 'block';
-      if (userDropdown) userDropdown.style.display = isOpen ? 'none' : 'block';
-    });
-  }
-
-  document.addEventListener('click', (e) => {
-    if (userMenu && !userMenu.contains(e.target)) {
-      if (userDropdown) userDropdown.style.display = 'none';
-    }
-  });
 
   /* -------------------- Public API -------------------- */
   window.Auth = {
@@ -643,5 +628,4 @@
       document.addEventListener('auth:favoritesUpdated', callback);
     }
   };
-
 })();

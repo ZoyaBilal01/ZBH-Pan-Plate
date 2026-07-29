@@ -9,23 +9,27 @@ const firebaseConfig = {
   measurementId: "G-4JR91ZMNKP"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+try {
+  firebase.initializeApp(firebaseConfig);
 
-// Firebase services
-const auth = firebase.auth();
-const database = firebase.database();
-const firestore = firebase.firestore();
-const storage = firebase.storage();
-const analytics = firebase.analytics();
+  const auth = firebase.auth();
+  const database = firebase.database();
+  const firestore = firebase.firestore();
+  const storage = firebase.storage();
+  const analytics = firebase.analytics();
 
-// 👇 ADD THIS PART AT THE VERY BOTTOM
-database.ref("test").set({
-  message: "Hello Firebase!",
-  connected: true,
-  time: new Date().toISOString()
-}).then(() => {
-  console.log("✅ Data written successfully!");
-}).catch((error) => {
-  console.error("❌ Error:", error);
-});
+  window.Auth = window.Auth || {};
+  window.Auth._services = { auth, database, firestore, storage, analytics };
+
+  database.ref("test").set({
+    message: "Hello Firebase!",
+    connected: true,
+    time: new Date().toISOString()
+  }).then(() => {
+    console.log("✅ Data written successfully!");
+  }).catch((error) => {
+    console.error("❌ Error:", error);
+  });
+} catch (error) {
+  console.error("Firebase initialization failed:", error);
+}
