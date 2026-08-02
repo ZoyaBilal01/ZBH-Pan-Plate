@@ -25,6 +25,8 @@
 
   /* -------------------- State -------------------- */
   let favorites = JSON.parse(localStorage.getItem('zbh_favorites') || '[]');
+  let activeCategory = '';
+  let homeRenderFn = null;
 
   /* -------------------- Shared Init -------------------- */
   SharedComponents.initShared(currentPage);
@@ -79,23 +81,82 @@
     { name: 'Breakfast', emoji: '🍳' }
   ];
 
-  function renderCategories() {
+  const CATEGORY_VALUES = ['Main Course', 'Curry', 'BBQ', 'Appetizer', 'Dessert', 'Soup', 'Rice', 'Salad', 'Noodles', 'Breakfast'];
+
+  function normalizeRecipeCategory(recipe) {
+    if (!recipe) return 'Main Course';
+
+    const rawCategory = String(recipe.category || '').trim();
+    if (CATEGORY_VALUES.includes(rawCategory)) return rawCategory;
+
+    const searchText = [
+      recipe.name || '',
+      recipe.description || '',
+      recipe.cuisine || '',
+      ...(recipe.ingredients || [])
+    ].join(' ').toLowerCase();
+
+    if (/(curry|korma|masala|dal|butter chicken|karahi|vindaloo)/.test(searchText)) return 'Curry';
+    if (/(bbq|barbecue|grill|grilled|kebab|tikka|ribs|wings|skewers)/.test(searchText)) return 'BBQ';
+    if (/(soup|stew|broth|ramen|tom yum|gazpacho|miso)/.test(searchText)) return 'Soup';
+    if (/(salad|caesar|greek salad|papaya salad|caprese)/.test(searchText)) return 'Salad';
+    if (/(dessert|cake|pudding|cookie|pastry|custard|creme|brulee|tiramisu|ice cream|sticky rice)/.test(searchText)) return 'Dessert';
+    if (/(noodle|ramen|mein|pad thai|hakka|udon|soba|pad see|lo mein)/.test(searchText)) return 'Noodles';
+    if (/(breakfast|omelette|omelet|toast|pancake|waffle|idli|dosa|paratha|frittata)/.test(searchText)) return 'Breakfast';
+    if (/(biryani|pulao|fried rice|rice|pilaf)/.test(searchText)) return 'Rice';
+    if (/(appetizer|starter|samosa|spring roll|dumpling|guacamole|nugget|quesadilla|wrap)/.test(searchText)) return 'Appetizer';
+
+    return 'Main Course';
+  }
+
+  function normalizeRecipes(recipes) {
+    return recipes.map(recipe => {
+      const normalized = { ...recipe };
+      normalized.category = normalizeRecipeCategory(recipe);
+      return normalized;
+    });
+  }
+
+  function renderCategories(selectedCategory = '', recipesToCount = null) {
     const grid = $('#categoryGrid');
     if (!grid) return;
-    const recipes = SharedComponents.getRecipes();
+    const recipes = recipesToCount || normalizeRecipes(SharedComponents.getRecipes());
     const counts = {};
     recipes.forEach(r => {
-      const cat = r.category || 'Other';
+      const cat = r.category || 'Main Course';
       counts[cat] = (counts[cat] || 0) + 1;
     });
-    grid.innerHTML = CATEGORY_META.map(meta => {
-      const count = counts[meta.name] || 0;
-      return `<div class="category-item">
+
+    const items = [{ name: 'All Categories', emoji: '🍽️' }, ...CATEGORY_META];
+    grid.innerHTML = items.map(meta => {
+      const isAll = meta.name === 'All Categories';
+      const value = isAll ? '' : meta.name;
+      const count = isAll ? recipes.length : counts[meta.name] || 0;
+      const activeClass = selectedCategory === value ? ' active' : '';
+      return `<div class="category-item${activeClass}" data-category="${value}" role="button" tabindex="0">
         <span class="category-emoji">${meta.emoji}</span>
         <span class="category-name">${meta.name}</span>
         <span class="category-count">${count}</span>
       </div>`;
     }).join('');
+
+    grid.querySelectorAll('.category-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const nextCategory = item.getAttribute('data-category') || '';
+        activeCategory = nextCategory;
+        const heroCategoryFilter = document.getElementById('heroCategoryFilter');
+        if (heroCategoryFilter) heroCategoryFilter.value = nextCategory;
+        if (typeof homeRenderFn === 'function') {
+          homeRenderFn(nextCategory);
+        }
+      });
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          item.click();
+        }
+      });
+    });
   }
 
   function initHome() {
@@ -108,15 +169,16 @@
     const homeEmpty = $('#homeEmpty');
     const homeRecipeTitle = $('#homeRecipeTitle');
 
-    function renderHome() {
+    homeRenderFn = (categoryOverride = null) => {
       const query = heroSearch.value;
       const cuisine = heroCuisineFilter.value;
-      const category = heroCategoryFilter.value;
+      const category = categoryOverride !== null && categoryOverride !== undefined ? categoryOverride : (heroCategoryFilter.value || activeCategory || '');
       const difficulty = heroDifficultyFilter.value;
-      const recipes = SharedComponents.getRecipes();
+      const recipes = normalizeRecipes(SharedComponents.getRecipes());
       const filtered = filterRecipes(recipes, query, cuisine, category, difficulty);
 
       homeRecipeGrid.innerHTML = '';
+      renderCategories(category, filtered);
       if (filtered.length === 0) {
         homeEmpty.style.display = 'block';
         homeRecipeTitle.textContent = 'Featured Recipes';
@@ -125,18 +187,22 @@
         homeRecipeTitle.textContent = query || cuisine || category || difficulty ? 'Search Results' : 'Featured Recipes';
         filtered.forEach(r => homeRecipeGrid.appendChild(SharedComponents.createRecipeCard(r)));
       }
-    }
+    };
 
-    heroSearchBtn.addEventListener('click', renderHome);
+    heroSearchBtn.addEventListener('click', () => homeRenderFn());
     heroSearch.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') renderHome();
+      if (e.key === 'Enter') homeRenderFn();
     });
-    heroCuisineFilter.addEventListener('change', renderHome);
-    heroCategoryFilter.addEventListener('change', renderHome);
-    heroDifficultyFilter.addEventListener('change', renderHome);
+    heroCuisineFilter.addEventListener('change', () => homeRenderFn());
+    heroCategoryFilter.addEventListener('change', () => {
+      activeCategory = heroCategoryFilter.value || '';
+      renderCategories(activeCategory);
+      homeRenderFn(activeCategory);
+    });
+    heroDifficultyFilter.addEventListener('change', () => homeRenderFn());
 
-    renderCategories();
-    renderHome();
+    activeCategory = heroCategoryFilter.value || '';
+    homeRenderFn(activeCategory);
   }
 
   /* -------------------- Browse Page -------------------- */
@@ -157,7 +223,7 @@
       const category = browseCategory.value;
       const difficulty = browseDifficulty.value;
       const sort = browseSort.value;
-      const recipes = SharedComponents.getRecipes();
+      const recipes = normalizeRecipes(SharedComponents.getRecipes());
       let filtered = filterRecipes(recipes, query, cuisine, category, difficulty);
       filtered = sortRecipes(filtered, sort);
 
