@@ -24,6 +24,52 @@
   const auth = firebase.auth();
   const database = firebase.database();
 
+  /* -------------------- Redirect Result Handling (GitHub Pages) -------------------- */
+  if (auth.getRedirectResult) {
+    auth.getRedirectResult().then((result) => {
+      if (!result || !result.user) return null;
+      const user = result.user;
+      const isNewUser = result.additionalUserInfo && result.additionalUserInfo.isNewUser;
+      const providerId = (result.additionalUserInfo && result.additionalUserInfo.providerId) || '';
+      const provider = providerId === 'google.com' ? 'google' : 'password';
+      if (isNewUser) {
+        return database.ref('users/' + user.uid + '/profile').set({
+          name: user.displayName || 'User',
+          email: user.email || '',
+          region: 'Unknown',
+          provider: provider,
+          createdAt: firebase.database.ServerValue.TIMESTAMP,
+          lastLogin: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+      return database.ref('users/' + user.uid + '/profile').update({
+        lastLogin: firebase.database.ServerValue.TIMESTAMP,
+        provider: provider
+      });
+    }).catch((error) => {
+      if (error && error.code && error.code !== 'auth/no-auth-result') {
+        console.error('Redirect sign-in result error:', error);
+      }
+    });
+  }
+
+  /* -------------------- Helpers -------------------- */
+  function normalizeProvider(providerId) {
+    if (!providerId) return 'email';
+    return providerId === 'google.com' ? 'google' : 'password';
+  }
+
+  const POPUP_REDIRECTABLE_CODES = [
+    'auth/popup-blocked',
+    'auth/popup-closed-by-user',
+    'auth/cancelled-popup-request',
+    'auth/timeout'
+  ];
+
+  function isPopupRedirectable(code) {
+    return POPUP_REDIRECTABLE_CODES.indexOf(code) !== -1;
+  }
+
   let currentAuthView = 'login';
   let favoritesSynced = false;
 
@@ -421,6 +467,12 @@
     setButtonLoading('loginSubmitBtn', true);
     auth.signInWithEmailAndPassword(email, password)
       .then((userCredential) => {
+        const user = userCredential.user;
+        if (user) {
+          database.ref('users/' + user.uid + '/profile')
+            .update({ lastLogin: firebase.database.ServerValue.TIMESTAMP, provider: 'email' })
+            .catch(() => {});
+        }
         showToast('Welcome back! You are now signed in.');
         closeAuthModal();
       })
@@ -474,12 +526,14 @@
         const user = userCredential.user;
         return user.updateProfile({ displayName: name })
           .then(() => {
-            return database.ref('users/' + user.uid + '/profile').set({
-              name: name,
-              email: email,
-              region: region,
-              createdAt: firebase.database.ServerValue.TIMESTAMP
-            });
+             return database.ref('users/' + user.uid + '/profile').set({
+               name: name,
+               email: email,
+               region: region,
+               provider: 'email',
+               createdAt: firebase.database.ServerValue.TIMESTAMP,
+               lastLogin: firebase.database.ServerValue.TIMESTAMP
+             });
           });
       })
       .then(() => {
@@ -544,27 +598,43 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider)
       .then((result) => {
-        const user = result.user;
-        const isNewUser = result.additionalUserInfo && result.additionalUserInfo.isNewUser;
-        if (isNewUser) {
-          return database.ref('users/' + user.uid + '/profile').set({
-            name: user.displayName || 'User',
-            email: user.email || '',
-            region: 'Unknown',
-            provider: 'google',
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-          }).then(() => {
-            showToast('Account created successfully! Welcome to ZBH Pan & Plate.');
-          });
-        }
-        showToast('Welcome back! You are now signed in.');
+        return processGoogleResult(result);
       })
       .then(() => {
-        closeAuthModal();
+        if (document.getElementById('authModal')) closeAuthModal();
       })
       .catch((error) => {
+        if (error.code && isPopupRedirectable(error.code)) {
+          auth.signInWithRedirect(provider);
+          return;
+        }
         showToast(getAuthErrorMessage(error.code) || 'Google sign-in failed. Please try again.');
       });
+  }
+
+  function processGoogleResult(result) {
+    const user = result.user;
+    const isNewUser = result.additionalUserInfo && result.additionalUserInfo.isNewUser;
+    const providerId = (result.additionalUserInfo && result.additionalUserInfo.providerId) || '';
+    const provider = normalizeProvider(providerId);
+    if (isNewUser) {
+      return database.ref('users/' + user.uid + '/profile').set({
+        name: user.displayName || 'User',
+        email: user.email || '',
+        region: 'Unknown',
+        provider: provider,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        lastLogin: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        showToast('Account created successfully! Welcome to ZBH Pan & Plate.');
+      });
+    }
+    return database.ref('users/' + user.uid + '/profile').update({
+      lastLogin: firebase.database.ServerValue.TIMESTAMP,
+      provider: provider
+    }).then(() => {
+      showToast('Welcome back! You are now signed in.');
+    });
   }
 
   /* -------------------- Helpers -------------------- */

@@ -12,6 +12,10 @@ const firebaseConfig = {
 try {
   firebase.initializeApp(firebaseConfig);
 
+  if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth.Auth) {
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+  }
+
   const auth = firebase.auth();
   const database = firebase.database();
   const firestore = firebase.firestore();

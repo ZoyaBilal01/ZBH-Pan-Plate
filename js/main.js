@@ -15,9 +15,10 @@
     if (path.includes('/pages/diet-plans.html')) return 'diet-plans';
     if (path.includes('/pages/about.html')) return 'about';
     if (path.includes('/pages/contact.html')) return 'contact';
-    if (path.includes('/pages/login.html')) return 'login';
-    if (path.includes('/pages/signup.html')) return 'signup';
-    if (path.includes('/pages/recipe.html')) return 'recipe';
+     if (path.includes('/pages/login.html')) return 'login';
+     if (path.includes('/pages/signup.html')) return 'signup';
+     if (path.includes('/pages/admin.html')) return 'admin';
+     if (path.includes('/pages/recipe.html')) return 'recipe';
     return 'home';
   }
 
@@ -61,6 +62,8 @@
         break;
       case 'signup':
         initAuthPage('signup');
+        break;
+      case 'admin':
         break;
       default:
         break;

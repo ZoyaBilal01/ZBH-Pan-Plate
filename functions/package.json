@@ -1,0 +1,13 @@
+{
+  "name": "functions",
+  "description": "Firebase Cloud Functions for ZBH Pan & Plate admin notifications and admin panel.",
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.3.0",
+    "firebase-functions": "^4.6.0",
+    "@sendgrid/mail": "^8.0.0"
+  }
+}

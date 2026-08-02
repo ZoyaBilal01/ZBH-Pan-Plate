@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - ZBH Pan & Plate</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .admin-bar { display: flex; gap: 12px; align-items: center; margin: 20px 0; flex-wrap: wrap; }
+    .admin-bar .search-input { max-width: 320px; flex: 1; }
+    .admin-summary { font-size: 0.9rem; color: var(--text-light); margin-bottom: 12px; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg); }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .admin-table th, .admin-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .admin-table th { background: var(--surface-alt); font-weight: 600; color: var(--text); position: sticky; top: 0; }
+    .admin-table tbody tr:hover td { background: var(--surface-alt); }
+    .admin-table th[data-sort="asc"]::after { content: " \u25B2"; }
+    .admin-table th[data-sort="desc"]::after { content: " \u25BC"; }
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <main class="main-content">
+    <section class="page page-admin active" id="page-admin">
+      <div class="container">
+        <h1 class="page-title">Admin Dashboard</h1>
+        <p class="page-subtitle">Registered users. Restricted to administrators.</p>
+
+        <div id="adminGate" style="display:block;">
+          <div class="auth-placeholder">
+            <p>Checking access...</p>
+          </div>
+        </div>
+
+        <div id="adminPanel" style="display:none;">
+          <div class="admin-summary" id="adminSummary"></div>
+          <div class="admin-bar">
+            <input type="text" class="search-input" id="adminSearch" placeholder="Search by name, email, or region..." autocomplete="off">
+            <button class="btn btn-primary" id="adminExportCsv" type="button">Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th data-col="name" data-sort>NAME</th>
+                  <th data-col="email" data-sort>EMAIL</th>
+                  <th data-col="region" data-sort>COUNTRY / REGION</th>
+                  <th data-col="provider" data-sort>PROVIDER</th>
+                  <th data-col="createdAt" data-sort>REGISTRATION DATE</th>
+                  <th data-col="lastLogin" data-sort>LAST LOGIN</th>
+                </tr>
+              </thead>
+              <tbody id="adminTableBody">
+                <tr><td colspan="6" style="padding:16px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:16px;">
+            <button class="btn btn-secondary" id="adminLoadMore" type="button" style="display:none;">Load More</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-placeholder"></div>
+  <div id="modals-placeholder"></div>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+  <!-- Firebase Configuration -->
+  <script src="../js/firebase-config.js"></script>
+
+  <!-- Auth Module -->
+  <script src="../js/auth.js"></script>
+
+  <!-- Shared Components -->
+  <script src="../js/common.js"></script>
+
+  <!-- Main Controller -->
+  <script src="../js/main.js"></script>
+
+  <!-- Admin Controller -->
+  <script src="../js/admin.js"></script>
+</body>
+</html>
