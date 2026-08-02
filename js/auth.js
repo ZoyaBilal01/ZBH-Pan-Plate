@@ -25,35 +25,44 @@
   const database = firebase.database();
 
   /* -------------------- Redirect Result Handling (GitHub Pages) -------------------- */
-  if (auth.getRedirectResult) {
-    auth.getRedirectResult().then((result) => {
-      if (!result || !result.user) return null;
-      const user = result.user;
-      const isNewUser = result.additionalUserInfo && result.additionalUserInfo.isNewUser;
-      const providerId = (result.additionalUserInfo && result.additionalUserInfo.providerId) || '';
-      const provider = providerId === 'google.com' ? 'google' : 'password';
-      if (isNewUser) {
-        return database.ref('users/' + user.uid + '/profile').set({
-          name: user.displayName || 'User',
-          email: user.email || '',
-          region: 'Unknown',
-          provider: provider,
-          createdAt: firebase.database.ServerValue.TIMESTAMP,
-          lastLogin: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
-      return database.ref('users/' + user.uid + '/profile').update({
-        lastLogin: firebase.database.ServerValue.TIMESTAMP,
-        provider: provider
-      });
-    }).catch((error) => {
-      if (error && error.code && error.code !== 'auth/no-auth-result') {
+  function handleRedirectResult() {
+    if (!auth.getRedirectResult) return;
+    logAuth('Checking redirect result...');
+    auth.getRedirectResult()
+      .then((result) => {
+        if (!result || !result.user) {
+          logAuth('No redirect result user found');
+          return null;
+        }
+        logAuth('Redirect result processed', { uid: result.user.uid, isNewUser: result.additionalUserInfo && result.additionalUserInfo.isNewUser });
+        return processGoogleResult(result);
+      })
+      .catch((error) => {
+        if (error && error.code === 'auth/no-auth-result') {
+          logAuth('No pending redirect result (normal on initial load)');
+          return null;
+        }
         console.error('Redirect sign-in result error:', error);
-      }
-    });
+        if (error && error.code === 'auth/unauthorized-domain') {
+          showToast('This domain is not authorized for sign-in. Please add it in Firebase console.');
+        } else if (error && error.code === 'auth/network-request-failed') {
+          showToast('Network error. Please check your connection and try again.');
+        } else {
+          showToast(getAuthErrorMessage(error.code) || 'Sign-in failed. Please try again.');
+        }
+        return null;
+      });
+  }
+
+  if (auth.getRedirectResult) {
+    handleRedirectResult();
   }
 
   /* -------------------- Helpers -------------------- */
+  function logAuth(message, data) {
+    console.log('[Auth] ' + message, data || '');
+  }
+
   function normalizeProvider(providerId) {
     if (!providerId) return 'email';
     return providerId === 'google.com' ? 'google' : 'password';
@@ -75,6 +84,7 @@
 
   /* -------------------- Auth State Observer -------------------- */
   auth.onAuthStateChanged((user) => {
+    logAuth('Auth state changed', user ? { uid: user.uid, email: user.email, displayName: user.displayName } : 'signed out');
     if (user) {
       updateUIForLoggedInUser(user);
       syncFavoritesFromFirebase(user.uid);
@@ -657,10 +667,12 @@
       'auth/user-mismatch': 'User mismatch',
       'auth/credential-already-in-use': 'Credential already in use',
       'auth/popup-closed-by-user': 'Popup closed by user',
-      'auth/popup-blocked': 'Popup blocked by browser',
+      'auth/popup-blocked': 'Popup blocked by browser. Trying redirect instead...',
       'auth/cancelled-popup-request': 'Sign-in cancelled',
       'auth/internal-error': 'Internal error. Please try again',
-      'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method'
+      'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method',
+      'auth/unauthorized-domain': 'This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.',
+      'auth/web-storage-unsupported': 'Browser storage unavailable. Please enable cookies and try again.'
     };
     return messages[code] || 'An error occurred. Please try again.';
   }
