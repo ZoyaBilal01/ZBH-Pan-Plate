@@ -120,18 +120,27 @@
   function renderCategories(selectedCategory = '', recipesToCount = null) {
     const grid = $('#categoryGrid');
     if (!grid) return;
-    const recipes = recipesToCount || normalizeRecipes(SharedComponents.getRecipes());
-    const counts = {};
-    recipes.forEach(r => {
+
+    const allRecipes = normalizeRecipes(SharedComponents.getRecipes());
+    const visibleRecipes = recipesToCount ? normalizeRecipes(recipesToCount) : allRecipes;
+    const totalCounts = {};
+    allRecipes.forEach(r => {
       const cat = r.category || 'Main Course';
-      counts[cat] = (counts[cat] || 0) + 1;
+      totalCounts[cat] = (totalCounts[cat] || 0) + 1;
     });
 
     const items = [{ name: 'All Categories', emoji: '🍽️' }, ...CATEGORY_META];
     grid.innerHTML = items.map(meta => {
       const isAll = meta.name === 'All Categories';
       const value = isAll ? '' : meta.name;
-      const count = isAll ? recipes.length : counts[meta.name] || 0;
+      let count = totalCounts[meta.name] || 0;
+
+      if (isAll) {
+        count = allRecipes.length;
+      } else if (selectedCategory && meta.name === selectedCategory) {
+        count = visibleRecipes.length;
+      }
+
       const activeClass = selectedCategory === value ? ' active' : '';
       return `<div class="category-item${activeClass}" data-category="${value}" role="button" tabindex="0">
         <span class="category-emoji">${meta.emoji}</span>
@@ -196,7 +205,6 @@
     heroCuisineFilter.addEventListener('change', () => homeRenderFn());
     heroCategoryFilter.addEventListener('change', () => {
       activeCategory = heroCategoryFilter.value || '';
-      renderCategories(activeCategory);
       homeRenderFn(activeCategory);
     });
     heroDifficultyFilter.addEventListener('change', () => homeRenderFn());
