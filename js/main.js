@@ -595,24 +595,230 @@
   }
 
   /* -------------------- Search & Filter Helpers -------------------- */
+  const SEARCH_ALIASES = {
+    'bbq': ['barbecue', 'barbeque'],
+    'barbecue': ['bbq', 'barbeque'],
+    'barbeque': ['bbq', 'barbecue'],
+    'burger': ['burger', 'burgers'],
+    'burgers': ['burger'],
+    'fries': ['fries', 'french fries'],
+    'fry': ['fries'],
+    'mac n cheese': ['mac and cheese', 'mac cheese'],
+    'mac and cheese': ['mac n cheese', 'mac cheese'],
+    'mac cheese': ['mac and cheese', 'mac n cheese'],
+    'aloo': ['aloo'],
+    'paratha': ['paratha', 'parathas'],
+    'shawarma': ['shawarma', 'shawerma'],
+    'shawerma': ['shawarma'],
+    'biry': ['biryani'],
+    'biryani': ['biry'],
+    'piza': ['pizza'],
+    'pizza': ['piza'],
+    'omlet': ['omelette', 'omelet'],
+    'omelette': ['omlet', 'omelet'],
+    'omelet': ['omelette', 'omlet'],
+    'spageti': ['spaghetti'],
+    'spaghetti': ['spageti'],
+    'past': ['pasta'],
+    'pasta': ['past'],
+    'pastas': ['pasta']
+  };
+
+  function normalizeSearchText(value) {
+    if (value == null) return '';
+    return String(value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function tokenizeSearchText(value) {
+    return normalizeSearchText(value).split(/\s+/).filter(Boolean);
+  }
+
+  function getSearchVariants(query) {
+    const base = normalizeSearchText(query);
+    const variants = new Set([base]);
+
+    if (!base) return [];
+
+    const tokens = tokenizeSearchText(base);
+    tokens.forEach(token => {
+      const aliases = SEARCH_ALIASES[token] || [];
+      aliases.forEach(alias => variants.add(normalizeSearchText(alias)));
+    });
+
+    Object.keys(SEARCH_ALIASES).forEach(key => {
+      if (base === key || base.includes(key) || key.includes(base)) {
+        (SEARCH_ALIASES[key] || []).forEach(alias => variants.add(normalizeSearchText(alias)));
+      }
+    });
+
+    return Array.from(variants).filter(Boolean);
+  }
+
+  function levenshteinDistance(a, b) {
+    const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+    for (let i = 0; i <= a.length; i += 1) dp[i][0] = i;
+    for (let j = 0; j <= b.length; j += 1) dp[0][j] = j;
+
+    for (let i = 1; i <= a.length; i += 1) {
+      for (let j = 1; j <= b.length; j += 1) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + cost
+        );
+      }
+    }
+
+    return dp[a.length][b.length];
+  }
+
+  function getTokenSimilarity(tokenA, tokenB) {
+    if (!tokenA || !tokenB) return 0;
+    if (tokenA === tokenB) return 30;
+    if (tokenA.includes(tokenB) || tokenB.includes(tokenA)) return 22;
+    if (tokenA.startsWith(tokenB) || tokenB.startsWith(tokenA)) return 20;
+
+    const dist = levenshteinDistance(tokenA, tokenB);
+    const maxLen = Math.max(tokenA.length, tokenB.length);
+    if (maxLen <= 3) return dist <= 1 ? 14 : 0;
+    if (dist <= 1) return 14;
+    if (dist <= 2) return 9;
+    return 0;
+  }
+
+  function scoreTextMatch(query, text, weight) {
+    const normalizedQuery = normalizeSearchText(query);
+    const normalizedText = normalizeSearchText(text);
+    if (!normalizedQuery || !normalizedText) return 0;
+
+    if (normalizedText === normalizedQuery) return 120 * weight;
+    if (normalizedText.includes(normalizedQuery)) return 90 * weight;
+    if (normalizedQuery.includes(normalizedText)) return 80 * weight;
+
+    const queryTokens = tokenizeSearchText(normalizedQuery);
+    const textTokens = tokenizeSearchText(normalizedText);
+    let score = 0;
+
+    if (queryTokens.length && textTokens.length) {
+      let matchedTokens = 0;
+      queryTokens.forEach(qToken => {
+        let best = 0;
+        textTokens.forEach(tToken => {
+          best = Math.max(best, getTokenSimilarity(qToken, tToken));
+        });
+        if (best >= 14) matchedTokens += 1;
+        score += best;
+      });
+
+      if (matchedTokens === queryTokens.length) score += 35 * weight;
+      if (matchedTokens >= Math.max(1, Math.ceil(queryTokens.length / 2))) score += 10 * weight;
+    }
+
+    const dist = levenshteinDistance(normalizedQuery, normalizedText);
+    const maxLen = Math.max(normalizedQuery.length, normalizedText.length);
+    if (maxLen) {
+      score += Math.max(0, (1 - dist / maxLen) * 16 * weight);
+    }
+
+    return score;
+  }
+
+  function getRecipeSearchScore(recipe, query) {
+    const variants = getSearchVariants(query);
+    if (!variants.length) return 0;
+
+    const name = normalizeSearchText(recipe.name || '');
+    const ingredientsText = normalizeSearchText((recipe.ingredients || []).join(' '));
+    const description = normalizeSearchText(recipe.description || '');
+    const cuisine = normalizeSearchText(recipe.cuisine || '');
+    const category = normalizeSearchText(recipe.category || '');
+    const keywordsText = normalizeSearchText(Array.isArray(recipe.keywords) ? recipe.keywords.join(' ') : (recipe.tags || ''));
+
+    const fields = [
+      { text: name, weight: 6 },
+      { text: ingredientsText, weight: 2.4 },
+      { text: description, weight: 1.5 },
+      { text: cuisine, weight: 1.3 },
+      { text: category, weight: 1.1 },
+      { text: keywordsText, weight: 1.3 }
+    ];
+
+    let score = 0;
+    let strongNameMatch = false;
+
+    fields.forEach(field => {
+      let fieldScore = 0;
+      variants.forEach(variant => {
+        const normalizedVariant = normalizeSearchText(variant);
+        if (!normalizedVariant || !field.text) return;
+
+        if (field.text === normalizedVariant) {
+          fieldScore = Math.max(fieldScore, 140 * field.weight);
+          return;
+        }
+
+        if (field.text.includes(normalizedVariant) || normalizedVariant.includes(field.text)) {
+          fieldScore = Math.max(fieldScore, 90 * field.weight);
+          return;
+        }
+
+        const queryTokens = tokenizeSearchText(normalizedVariant);
+        const textTokens = tokenizeSearchText(field.text);
+        let tokenScore = 0;
+
+        queryTokens.forEach(qToken => {
+          let best = 0;
+          textTokens.forEach(tToken => {
+            best = Math.max(best, getTokenSimilarity(qToken, tToken));
+          });
+          tokenScore += best;
+        });
+
+        const dist = levenshteinDistance(normalizedVariant, field.text);
+        const maxLen = Math.max(normalizedVariant.length, field.text.length);
+        if (tokenScore >= 35 || (dist <= 2 && maxLen <= 8)) {
+          fieldScore = Math.max(fieldScore, 32 * field.weight);
+        }
+      });
+
+      if (field.weight >= 6 && fieldScore >= 90 * field.weight) {
+        strongNameMatch = true;
+      }
+      score += fieldScore;
+    });
+
+    return strongNameMatch ? score : (score >= 90 ? score : 0);
+  }
+
   function filterRecipes(recipes, query, cuisine, category, difficulty) {
-    const q = (query || '').toLowerCase().trim();
-    return recipes.filter(r => {
+    const normalizedQuery = normalizeSearchText(query);
+    const filtered = recipes.filter(r => {
       if (cuisine && r.cuisine !== cuisine) return false;
       if (category && r.category !== category) return false;
       if (difficulty && r.difficulty !== difficulty) return false;
-      if (q) {
-        const haystack = [
-          r.name,
-          r.cuisine,
-          r.category,
-          r.description,
-          ...(r.ingredients || [])
-        ].join(' ').toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
       return true;
     });
+
+    if (!normalizedQuery) return filtered;
+
+    const scored = filtered
+      .map(recipe => ({ recipe, score: getRecipeSearchScore(recipe, normalizedQuery) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    if (scored.length) {
+      return scored.slice(0, Math.min(40, scored.length)).map(item => item.recipe);
+    }
+
+    return filtered.slice(0, 12);
   }
 
   function sortRecipes(recipes, sortValue) {
