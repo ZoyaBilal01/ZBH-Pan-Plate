@@ -22,6 +22,11 @@ if (SENDGRID_KEY) {
   sgMail.setApiKey(SENDGRID_KEY);
 }
 
+const EMAILJS_CFG = (functions.config().emailjs) || {};
+const EMAILJS_PUBLIC_KEY = EMAILJS_CFG.public_key || '';
+const EMAILJS_SERVICE_ID = EMAILJS_CFG.service_id || '';
+const EMAILJS_TEMPLATE_ID = EMAILJS_CFG.template_id || '';
+
 function escapeHtml(value) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   return String(value || '').replace(/[&<>"']/g, (c) => map[c]);
@@ -145,6 +150,16 @@ exports.listUsersAdmin = functions.https.onCall(async (data, context) => {
   return { users: users, pageToken: list.pageToken || null, count: users.length };
 });
 
+exports.getEmailJsConfig = functions.https.onCall(async (data, context) => {
+  const configured = !!(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID);
+  return {
+    configured: configured,
+    publicKey: EMAILJS_PUBLIC_KEY,
+    serviceId: EMAILJS_SERVICE_ID,
+    templateId: EMAILJS_TEMPLATE_ID
+  };
+});
+
 /* -------------------- Certification Functions -------------------- */
 const CERTIFICATIONS_PATH = 'certifications';
 
@@ -172,6 +187,7 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
   const country = String(data.country || '').trim();
   const whatsappNumber = String(data.whatsappNumber || '').trim();
   const age = data.age != null ? String(data.age) : 'Not provided';
+  const notes = String(data.notes || '').trim() || 'No notes provided';
   const recipeNames = Array.isArray(data.recipeNames) ? data.recipeNames : [];
   const imagePaths = Array.isArray(data.imagePaths) ? data.imagePaths : [];
   const createdAt = formatTimestamp(data.createdAt || Date.now());
@@ -222,6 +238,7 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
   const countryEsc = escapeHtml(country);
   const whatsappEsc = escapeHtml(whatsappNumber);
   const ageEsc = escapeHtml(age);
+  const notesEsc = escapeHtml(notes);
   const createdAtEsc = escapeHtml(createdAt);
   const submissionIdEsc = escapeHtml(submissionId);
   const ipEsc = escapeHtml(ip);
@@ -248,6 +265,7 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
         <tr><td style="padding:4px 8px;"><strong>City:</strong></td><td>${cityEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>Country:</strong></td><td>${countryEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>Age:</strong></td><td>${ageEsc}</td></tr>
+        <tr><td style="padding:4px 8px;"><strong>Notes:</strong></td><td>${notesEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>Date &amp; Time:</strong></td><td>${createdAtEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>IP Address:</strong></td><td>${ipEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>User Agent:</strong></td><td>${uaEsc}</td></tr>
@@ -271,6 +289,7 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
     `City: ${city}\n` +
     `Country: ${country}\n` +
     `Age: ${age}\n` +
+    `Notes: ${notes}\n` +
     `Date & Time: ${createdAt}\n` +
     `IP Address: ${ip}\n` +
     `User Agent: ${userAgent}\n` +
@@ -328,8 +347,9 @@ exports.getCertificationRequests = functions.https.onCall(async (data, context) 
       city: record.city || '',
       country: record.country || '',
       whatsappNumber: record.whatsappNumber || '',
-      age: record.age || null,
-      recipeNames: Array.isArray(record.recipeNames) ? record.recipeNames : [],
+       age: record.age || null,
+       notes: record.notes || '',
+       recipeNames: Array.isArray(record.recipeNames) ? record.recipeNames : [],
       imagePaths: Array.isArray(record.imagePaths) ? record.imagePaths : [],
       status: record.status || 'pending',
       certificateIssued: record.certificateIssued === true,

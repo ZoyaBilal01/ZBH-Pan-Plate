@@ -231,6 +231,7 @@
       '        <tr><td><strong>City:</strong></td><td>' + escapeHtml(submission.city || '') + '</td></tr>' +
       '        <tr><td><strong>Country:</strong></td><td>' + escapeHtml(submission.country || '') + '</td></tr>' +
       '        <tr><td><strong>Age:</strong></td><td>' + escapeHtml(submission.age != null ? String(submission.age) : '') + '</td></tr>' +
+      '        <tr><td><strong>Notes:</strong></td><td>' + escapeHtml(submission.notes || '') + '</td></tr>' +
       '        <tr><td><strong>Submitted:</strong></td><td>' + escapeHtml(formatTimestamp(submission.submittedAt)) + '</td></tr>' +
       '      </table>' +
       '    </div>' +

@@ -101,7 +101,16 @@
                   <input type="number" id="certAge" name="age" min="1" max="120" placeholder="Enter your age">
                   <span class="field-error" id="certAgeError"></span>
                 </div>
+                <div class="form-group">
+                  <label for="certNotes">Notes (Optional)</label>
+                  <textarea id="certNotes" name="notes" rows="3" placeholder="Any additional information..."></textarea>
+                  <span class="field-error" id="certNotesError"></span>
+                </div>
               </div>
+
+              <!-- Honeypot field for spam prevention -->
+              <input type="text" id="certWebsite" name="website" autocomplete="off" style="display:none !important;">
+              <input type="hidden" name="formTimestamp" value="">
             </div>
 
             <!-- Upload Section -->
@@ -120,9 +129,9 @@
                     <label class="cert-upload-area" for="certFile-0">
                       <div class="upload-icon">📷</div>
                       <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG • Max 5MB</div>
+                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
                     </label>
-                    <input type="file" id="certFile-0" class="cert-file-input" data-slot="0" accept="image/jpeg,image/jpg,image/png" style="display:none;">
+                    <input type="file" id="certFile-0" class="cert-file-input" data-slot="0" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
                     <div class="cert-upload-error" id="certFileError-0"></div>
                     <div class="cert-preview-wrapper" id="certPreview-0"></div>
                   </div>
@@ -138,9 +147,9 @@
                     <label class="cert-upload-area" for="certFile-1">
                       <div class="upload-icon">📷</div>
                       <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG • Max 5MB</div>
+                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
                     </label>
-                    <input type="file" id="certFile-1" class="cert-file-input" data-slot="1" accept="image/jpeg,image/jpg,image/png" style="display:none;">
+                    <input type="file" id="certFile-1" class="cert-file-input" data-slot="1" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
                     <div class="cert-upload-error" id="certFileError-1"></div>
                     <div class="cert-preview-wrapper" id="certPreview-1"></div>
                   </div>
@@ -156,9 +165,9 @@
                     <label class="cert-upload-area" for="certFile-2">
                       <div class="upload-icon">📷</div>
                       <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG • Max 5MB</div>
+                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
                     </label>
-                    <input type="file" id="certFile-2" class="cert-file-input" data-slot="2" accept="image/jpeg,image/jpg,image/png" style="display:none;">
+                    <input type="file" id="certFile-2" class="cert-file-input" data-slot="2" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
                     <div class="cert-upload-error" id="certFileError-2"></div>
                     <div class="cert-preview-wrapper" id="certPreview-2"></div>
                   </div>
@@ -174,9 +183,9 @@
                     <label class="cert-upload-area" for="certFile-3">
                       <div class="upload-icon">📷</div>
                       <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG • Max 5MB</div>
+                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
                     </label>
-                    <input type="file" id="certFile-3" class="cert-file-input" data-slot="3" accept="image/jpeg,image/jpg,image/png" style="display:none;">
+                    <input type="file" id="certFile-3" class="cert-file-input" data-slot="3" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
                     <div class="cert-upload-error" id="certFileError-3"></div>
                     <div class="cert-preview-wrapper" id="certPreview-3"></div>
                   </div>
@@ -192,9 +201,9 @@
                     <label class="cert-upload-area" for="certFile-4">
                       <div class="upload-icon">📷</div>
                       <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG • Max 5MB</div>
+                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
                     </label>
-                    <input type="file" id="certFile-4" class="cert-file-input" data-slot="4" accept="image/jpeg,image/jpg,image/png" style="display:none;">
+                    <input type="file" id="certFile-4" class="cert-file-input" data-slot="4" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
                     <div class="cert-upload-error" id="certFileError-4"></div>
                     <div class="cert-preview-wrapper" id="certPreview-4"></div>
                   </div>
@@ -207,6 +216,7 @@
 
             <!-- Upload Progress -->
             <div class="cert-upload-progress" id="certUploadProgress">
+              <div class="progress-step" id="certUploadStep">Preparing...</div>
               <div class="progress-bar-container">
                 <div class="progress-bar-fill" id="certProgressBar"></div>
               </div>
@@ -224,8 +234,9 @@
             <!-- Success Message -->
             <div class="cert-success" id="certSuccess">
               <div class="cert-success-icon">✅</div>
-              <h3 class="cert-success-title">Application Submitted Successfully!</h3>
-              <div class="cert-success-body"></div>
+              <h3 class="cert-success-title" id="certSuccessOne">Application Submitted Successfully!</h3>
+              <div class="cert-success-body" id="certSuccessTwo">👨‍🍳 Your cooking dishes have been received.<br><br>The website owner will now review your cooking proof.</div>
+              <div class="cert-success-body" id="certSuccessThree" style="display:none;">📱 If your application is approved, you will receive a WhatsApp message with the PKR 500 payment details.<br><br>After payment is confirmed, your official ZBH Pan & Plate Cooking Certificate will be sent to you.</div>
             </div>
 
             <!-- Privacy Notice -->
@@ -262,5 +273,8 @@
 
   <!-- Certification Page Logic -->
   <script src="../js/certification.js"></script>
+
+  <!-- EmailJS Integration (fallback when Firebase backend is not configured) -->
+  <script src="../js/emailjs-config.js"></script>
 </body>
 </html>

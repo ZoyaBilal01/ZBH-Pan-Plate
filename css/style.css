@@ -1537,7 +1537,13 @@ body {
   white-space: pre-line;
   text-align: left;
   max-width: 640px;
-  margin: 0 auto;
+  margin: 0 auto 8px;
+}
+
+.cert-success-body + .cert-success-body {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
 /* ---- Upload progress ---- */
@@ -1552,6 +1558,13 @@ body {
 
 .cert-upload-progress.show {
   display: block;
+}
+
+.progress-step {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
 }
 
 .progress-bar-container {

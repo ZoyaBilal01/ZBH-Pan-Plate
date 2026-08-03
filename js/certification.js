@@ -2,23 +2,43 @@
    ZBH Pan & Plate — Cooking Certification Page Controller
    Handles form validation, image compression + parallel upload (Firebase
    Storage), submission storage (Firebase RTDB), and admin email
-   notification (Firebase Function).
+   notification (Firebase Function with SendGrid or EmailJS fallback).
    ========================================================================== */
 
 (function () {
   'use strict';
 
   const MAX_IMAGES = 5;
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB (original upload limit)
-  const MAX_IMAGE_WIDTH = 1080; // max width for compressed uploads
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+  const MAX_IMAGE_WIDTH = 1080;
   const COMPRESS_QUALITY = 0.85;
   const MAX_RETRIES = 3;
-  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const SUBMISSION_COOLDOWN_MS = 60000; // 60 seconds between submissions from same IP/UA
+  const DUPLICATE_CHECK_WINDOW_MS = 300000; // 5 minutes
 
   let uploadedFiles = {}; // slotIndex -> file object
+  let uploadProgress = {}; // slotIndex -> 0..100
+  let uploadErrors = {};
+  let isSubmitting = false;
 
   function $(sel) { return document.querySelector(sel); }
   function $$(sel) { return document.querySelectorAll(sel); }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function formatTime(ms) {
+    const d = new Date(ms);
+    return d.toLocaleString();
+  }
 
   function formatFileSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
@@ -44,6 +64,8 @@
   function isValidPhone(phone) {
     return /^[\+]?[0-9\s\-\(\)]{7,20}$/.test(phone);
   }
+
+  /* -------------------- Error handling -------------------- */
 
   function showError(message) {
     const errEl = $('#certFormError');
@@ -97,6 +119,8 @@
     if (slotEl) slotEl.classList.remove('invalid');
   }
 
+  /* -------------------- Image compression -------------------- */
+
   function compressImage(file, callback) {
     const img = new Image();
     img.onload = function () {
@@ -114,7 +138,7 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+      const mimeType = file.type === 'image/png' || file.type === 'image/webp' ? file.type : 'image/jpeg';
       canvas.toBlob(function (blob) {
         blob.originalName = file.name;
         blob.lastModified = file.lastModified;
@@ -126,6 +150,8 @@
     };
     img.src = URL.createObjectURL(file);
   }
+
+  /* -------------------- File handling -------------------- */
 
   function handleFileSelect(e, slotIndex) {
     const input = e.target;
@@ -139,7 +165,7 @@
     const file = files[0];
 
     if (ALLOWED_TYPES.indexOf(file.type) === -1) {
-      setSlotError(slotIndex, 'Please select a JPG, JPEG, or PNG image.');
+      setSlotError(slotIndex, 'Please select a JPG, JPEG, PNG, or WEBP image.');
       return;
     }
 
@@ -157,7 +183,6 @@
     if (!previewWrapper) return;
 
     const url = URL.createObjectURL(file);
-
     const img = document.createElement('img');
     img.src = url;
     img.alt = 'Preview';
@@ -223,6 +248,8 @@
     });
   }
 
+  /* -------------------- Validation -------------------- */
+
   function validateForm() {
     clearError();
     let hasError = false;
@@ -237,6 +264,7 @@
     const whatsapp = $('#certWhatsApp').value.trim();
     const email = $('#certEmail').value.trim();
     const age = $('#certAge').value.trim();
+    const notes = $('#certNotes').value.trim();
 
     if (!fullName) { showFieldError('certFullName', 'Please enter your full name'); hasError = true; }
     if (!city) { showFieldError('certCity', 'Please enter your city'); hasError = true; }
@@ -278,18 +306,66 @@
       }
     }
 
+    ['certFullName', 'certCity', 'certCountry', 'certWhatsApp', 'certEmail'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.value = el.value.trim();
+    });
+
     if (hasError) {
       showError('Please fill in all required fields and upload exactly 5 images.');
       return false;
     }
 
-    return true;
+    return {
+      fullName: fullName,
+      city: city,
+      country: country,
+      whatsappNumber: whatsapp,
+      email: email,
+      age: age ? parseInt(age, 10) : null,
+      notes: notes
+    };
   }
 
-  /* -------------------- Upload with progress + retry -------------------- */
+  /* -------------------- Submission cooldown / spam prevention -------------------- */
 
-  let uploadProgress = {}; // slotIndex -> 0..100
-  let uploadErrors = {};
+  function checkSubmissionCooldown() {
+    const key = 'zbh_cert_last_submit';
+    const last = parseInt(localStorage.getItem(key) || '0', 10);
+    const now = Date.now();
+    if (now - last < SUBMISSION_COOLDOWN_MS) {
+      return Math.ceil((SUBMISSION_COOLDOWN_MS - (now - last)) / 1000);
+    }
+    localStorage.setItem(key, String(now));
+    return 0;
+  }
+
+  function checkDuplicateSubmission(formData) {
+    const key = 'zbh_cert_dup_' + btoa(formData.email || '') + '_' + btoa(formData.fullName || '');
+    const last = parseInt(localStorage.getItem(key) || '0', 10);
+    const now = Date.now();
+    if (now - last < DUPLICATE_CHECK_WINDOW_MS) {
+      return true;
+    }
+    localStorage.setItem(key, String(now));
+    return false;
+  }
+
+  /* -------------------- Upload progress UI -------------------- */
+
+  function setSubmitLoading(isLoading, isUploading) {
+    const btn = $('#certSubmitBtn');
+    if (!btn) return;
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoader = btn.querySelector('.btn-loader');
+    if (btnText) btnText.style.display = (isLoading || isUploading) ? 'none' : 'inline';
+    if (isUploading) {
+      if (btnLoader) btnLoader.style.display = 'none';
+    } else if (btnLoader) {
+      btnLoader.style.display = isLoading ? 'inline-block' : 'none';
+    }
+    btn.disabled = isLoading || isUploading;
+  }
 
   function showUploadProgress() {
     const prog = $('#certUploadProgress');
@@ -302,60 +378,26 @@
     if (prog) prog.classList.remove('show');
   }
 
-  function setSubmitLoading(isLoading, isUploading) {
-    const btn = $('#certSubmitBtn');
-    if (!btn) return;
-    const btnText = btn.querySelector('.btn-text');
-    const btnLoader = btn.querySelector('.btn-loader');
-    if (btnText) btnText.style.display = isLoading ? 'none' : 'inline';
-    if (isUploading) {
-      if (btnLoader) btnLoader.style.display = 'none';
-    } else if (btnLoader) {
-      btnLoader.style.display = isLoading ? 'inline-block' : 'none';
-    }
-    btn.disabled = isLoading || isUploading;
+  function setStep(step, text) {
+    const stepEl = $('#certUploadStep');
+    const progressText = $('#certUploadProgress .progress-text');
+    if (stepEl) stepEl.textContent = text;
+    if (progressText) progressText.textContent = text;
   }
 
-  function updateProgressBar(percent, text) {
+  function updateProgressBar(percent) {
     const fill = $('#certProgressBar');
-    const label = $('#certProgressText');
     if (fill) fill.style.width = Math.round(percent) + '%';
-    if (label) label.textContent = text || ('Uploading… ' + Math.round(percent) + '%');
-  }
-
-  function uploadWithRetry(storageRef, file, slotIndex, attempt) {
-    attempt = attempt || 1;
-    return new Promise(function (resolve, reject) {
-      const task = storageRef.put(file);
-
-      task.on('state_changed',
-        function (snapshot) {
-          const pct = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          uploadProgress[slotIndex] = pct;
-          refreshOverallProgress();
-        },
-        function (err) {
-          if (attempt < MAX_RETRIES) {
-            uploadProgress[slotIndex] = 0;
-            uploadWithRetry(storageRef, file, slotIndex, attempt + 1).then(resolve, reject);
-          } else {
-            reject({ slot: slotIndex, error: err });
-          }
-        },
-        function () {
-          resolve();
-        }
-      );
-    });
   }
 
   function refreshOverallProgress() {
-    const values = Object.values(uploadProgress);
-    const total = values.reduce(function (sum, v) { return sum + (v || 0); }, 0);
+    const values = Object.keys(uploadProgress).map(function (k) { return uploadProgress[k] || 0; });
+    const total = values.reduce(function (sum, v) { return sum + v; }, 0);
     const avg = values.length > 0 ? total / values.length : 0;
-    const uploaded = Object.keys(uploadProgress).filter(function (k) { return uploadProgress[k] >= 100; }).length;
-    updateProgressBar(avg, 'Uploading images ' + uploaded + '/' + MAX_IMAGES + ' complete...');
+    updateProgressBar(avg);
   }
+
+  /* -------------------- Parallel upload with retry -------------------- */
 
   async function compressAllImages() {
     const promises = [];
@@ -374,13 +416,42 @@
     return Promise.all(promises);
   }
 
+  function uploadWithRetry(storageRef, file, slotIndex, attempt) {
+    attempt = attempt || 1;
+    return new Promise(function (resolve, reject) {
+      const task = storageRef.put(file);
+
+      task.on('state_changed',
+        function (snapshot) {
+          const pct = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          uploadProgress[slotIndex] = pct;
+          refreshOverallProgress();
+        },
+        function (err) {
+          if (attempt < MAX_RETRIES) {
+            uploadProgress[slotIndex] = 0;
+            setTimeout(function () {
+              uploadWithRetry(storageRef, file, slotIndex, attempt + 1).then(resolve, reject);
+            }, 1000);
+          } else {
+            reject({ slot: slotIndex, error: err });
+          }
+        },
+        function () {
+          resolve();
+        }
+      );
+    });
+  }
+
   async function uploadAllImages(submissionId) {
     const storage = firebase.storage();
     const bucket = storage.ref();
 
+    setStep(1, 'Compressing images...');
     const compressedList = await compressAllImages();
     compressedList.forEach(function (item) {
-      item && (uploadProgress[item.slot] = 0);
+      if (item) uploadProgress[item.slot] = 0;
     });
     refreshOverallProgress();
 
@@ -396,70 +467,157 @@
         })
         .catch(function (err) {
           uploadErrors[err.slot] = err.error;
-          setSlotError(err.slot, 'Upload failed. Please try again.');
+          setSlotError(err.slot, 'Upload failed after retries. Please try again.');
           throw err;
         });
     });
 
-    const results = await Promise.all(uploadPromises);
+    let results = [];
+    try {
+      results = await Promise.all(uploadPromises);
+    } catch (err) {
+      throw { type: 'upload', slot: err.slot };
+    }
+
     return results.filter(function (r) { return r !== null; });
   }
 
-  const SUCCESS_MESSAGE =
-    'Application Submitted Successfully!\n\n' +
-    'Thank you for applying for the ZBH Pan & Plate Cooking Certification.\n\n' +
-    'Your cooking proof has been received successfully.\n\n' +
-    'The website owner will carefully review your submitted dishes.\n\n' +
-    'If your application is approved, you will be contacted on your WhatsApp number with the PKR 500 payment instructions.\n\n' +
-    'After payment is confirmed, your official Cooking Certificate will be sent to you.\n\n' +
-    'Please allow some time for the review process.';
+  /* -------------------- Email notification -------------------- */
+
+  async function sendNotification(submissionId, formData, imagePaths, recipeNames) {
+    const db = firebase.database();
+
+    let notificationSent = false;
+    let notificationMethod = null;
+
+    try {
+      const notifyFn = firebase.functions().httpsCallable('notifyAdminCertification');
+      const result = await notifyFn({
+        submissionId: submissionId,
+        fullName: formData.fullName,
+        email: formData.email,
+        city: formData.city,
+        country: formData.country,
+        whatsappNumber: formData.whatsappNumber,
+        age: formData.age,
+        notes: formData.notes,
+        recipeNames: recipeNames,
+        imagePaths: imagePaths,
+        createdAt: Date.now()
+      });
+
+      if (result.data && (result.data.success || !result.data.warning)) {
+        notificationSent = true;
+        notificationMethod = 'sendgrid';
+      } else if (result.data && result.data.warning) {
+        notificationMethod = null;
+      }
+    } catch (err) {
+      notificationMethod = null;
+    }
+
+    if (!notificationSent) {
+      if (typeof EmailJSConfig !== 'undefined' && EmailJSConfig) {
+        try {
+          const config = await EmailJSConfig.getConfigViaFunction();
+          if (config && config.configured) {
+            const params = {
+              submission_id: submissionId,
+              applicant_name: formData.fullName,
+              applicant_email: formData.email,
+              whatsapp_number: formData.whatsappNumber,
+              city: formData.city,
+              country: formData.country,
+              age: formData.age ? String(formData.age) : 'Not provided',
+              notes: formData.notes || '',
+              date_time: formatTime(Date.now()),
+              recipe_names: recipeNames.join(', '),
+              image_links: imagePaths.map(function (p, idx) {
+                return 'Image ' + (idx + 1) + ': ' + p;
+              }).join('\n')
+            };
+            await EmailJSConfig.sendViaEmailJs(config, params);
+            notificationSent = true;
+            notificationMethod = 'emailjs';
+          }
+        } catch (emailjsErr) {
+          notificationSent = false;
+        }
+      }
+    }
+
+    return { sent: notificationSent, method: notificationMethod };
+  }
+
+  /* -------------------- Success message -------------------- */
+
+  const SUCCESS_MESSAGES = {
+    one: '✅ Application Submitted Successfully!',
+    two: '👨‍🍳 Your cooking dishes have been received.\n\nThe website owner will now review your cooking proof.',
+    three: '📱 If your application is approved, you will receive a WhatsApp message with the PKR 500 payment details.\n\nAfter payment is confirmed, your official ZBH Pan & Plate Cooking Certificate will be sent to you.'
+  };
 
   function showSuccess() {
     $('#certificationForm').style.display = 'none';
-    const successEl = $('#certSuccess .cert-success-body');
-    if (successEl) {
-      successEl.textContent = SUCCESS_MESSAGE;
-    }
+    const successOne = $('#certSuccessOne');
+    const successTwo = $('#certSuccessTwo');
+    const successThree = $('#certSuccessThree');
+    if (successOne) successOne.textContent = SUCCESS_MESSAGES.one;
+    if (successTwo) successTwo.textContent = SUCCESS_MESSAGES.two;
+    if (successThree) successThree.textContent = SUCCESS_MESSAGES.three;
     $('#certSuccess').classList.add('show');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  /* -------------------- Main submit handler -------------------- */
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!validateForm()) return;
 
+    if (isSubmitting) return;
+
+    const cooldownSeconds = checkSubmissionCooldown();
+    if (cooldownSeconds > 0) {
+      showError('Please wait ' + cooldownSeconds + ' more seconds before submitting again.');
+      return;
+    }
+
+    const formData = validateForm();
+    if (!formData) return;
+
+    if (checkDuplicateSubmission(formData)) {
+      showError('A recent submission with this information was already sent. Please wait before submitting again.');
+      return;
+    }
+
+    isSubmitting = true;
     showUploadProgress();
-    updateProgressBar(0, 'Preparing images...');
     Object.keys(uploadProgress).forEach(function (k) { delete uploadProgress[k]; });
     Object.keys(uploadErrors).forEach(function (k) { delete uploadErrors[k]; });
 
     const submissionId = generateSubmissionId();
-    const fullName = $('#certFullName').value.trim();
-    const city = $('#certCity').value.trim();
-    const country = $('#certCountry').value.trim();
-    const whatsapp = $('#certWhatsApp').value.trim();
-    const email = $('#certEmail').value.trim();
-    const age = $('#certAge').value.trim();
-
     const recipeNames = [];
     for (let i = 0; i < MAX_IMAGES; i++) recipeNames.push(getRecipeName(i));
 
     try {
-      updateProgressBar(0, 'Uploading 5 images...');
+      setStep(1, 'Uploading image 1 of 5...');
+      updateProgressBar(0);
       const uploadResults = await uploadAllImages(submissionId);
       const imagePaths = uploadResults.map(function (r) { return r.path; });
 
-      updateProgressBar(50, 'Saving submission...');
-      const timestamp = firebase.database.ServerValue.TIMESTAMP;
+      setStep(2, 'Preparing Email...');
+      updateProgressBar(50);
 
+      const timestamp = firebase.database.ServerValue.TIMESTAMP;
       const submissionData = {
         submissionId: submissionId,
-        fullName: fullName,
-        email: email,
-        city: city,
-        country: country,
-        whatsappNumber: whatsapp,
-        age: age ? parseInt(age, 10) : null,
+        fullName: formData.fullName,
+        email: formData.email,
+        city: formData.city,
+        country: formData.country,
+        whatsappNumber: formData.whatsappNumber,
+        age: formData.age,
+        notes: formData.notes,
         recipeNames: recipeNames,
         imagePaths: imagePaths,
         status: 'pending',
@@ -470,26 +628,12 @@
 
       await firebase.database().ref('certifications/' + submissionId).set(submissionData);
 
-      updateProgressBar(75, 'Sending notification...');
-      try {
-        const notifyFn = firebase.functions().httpsCallable('notifyAdminCertification');
-        await notifyFn({
-          submissionId: submissionId,
-          fullName: fullName,
-          email: email,
-          city: city,
-          country: country,
-          whatsappNumber: whatsapp,
-          age: age ? parseInt(age, 10) : null,
-          recipeNames: recipeNames,
-          imagePaths: imagePaths,
-          createdAt: Date.now()
-        });
-      } catch (notifyErr) {
-        console.warn('Admin notification failed (submission still recorded):', notifyErr);
-      }
+      setStep(3, 'Sending Email...');
+      updateProgressBar(70);
 
-      updateProgressBar(100, 'Done!');
+      const notification = await sendNotification(submissionId, formData, imagePaths, recipeNames);
+
+      updateProgressBar(100);
 
       setTimeout(function () {
         hideUploadProgress();
@@ -498,24 +642,40 @@
       }, 300);
 
     } catch (err) {
-      const failedSlot = err.slot !== undefined ? err.slot : -1;
-      let msg = 'Something went wrong during submission. ';
-      if (failedSlot >= 0) {
-        msg += 'Image upload for Recipe ' + (failedSlot + 1) + ' failed. Please try again.';
-      } else {
-        msg += (err.message || 'Please try again.');
-      }
       hideUploadProgress();
       setSubmitLoading(false, false);
-      showError(msg);
+
+      if (err && err.type === 'upload') {
+        showError('One or more images failed to upload.');
+      } else if (err && err.message && err.message.indexOf('network') !== -1) {
+        showError('Connection lost. Please try again.');
+      } else {
+        showError('Something went wrong during submission. Please try again.');
+      }
+
+      isSubmitting = false;
     }
   }
+
+  /* -------------------- Init -------------------- */
 
   function init() {
     const form = $('#certificationForm');
     if (!form) return;
 
     initUploadSlots();
+
+    // Network status monitoring
+    window.addEventListener('offline', function () {
+      showError('Connection lost. Please try again.');
+    });
+    window.addEventListener('online', function () {
+      const errEl = $('#certFormError');
+      if (errEl && errEl.classList.contains('show') && errEl.textContent.indexOf('Connection lost') !== -1) {
+        clearError();
+      }
+    });
+
     form.addEventListener('submit', handleSubmit);
   }
 
@@ -527,6 +687,7 @@
 
   window.Certification = {
     validateForm: validateForm,
-    formatFileSize: formatFileSize
+    formatFileSize: formatFileSize,
+    formatTime: formatTime
   };
 })();
