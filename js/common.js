@@ -307,7 +307,7 @@ const SharedComponents = (function () {
 
     const card = document.createElement('div');
     card.className = 'recipe-card';
-    const imageStyle = recipe.image ? `background-image: url('${recipe.image}'), ${theme.color};` : `background: ${theme.color};`;
+    const imageStyle = recipe.image ? `background-image: url('${recipe.image}'), ${theme.color};` : `background-image: ${theme.color};`;
     card.innerHTML = `
       <div class="recipe-card-image" style="${imageStyle}">
         <span class="recipe-card-badge">${recipe.category || 'Recipe'}</span>
@@ -410,7 +410,7 @@ const SharedComponents = (function () {
       ingredientsHtml = (recipe.ingredients || []).map(i => `<li>${i}</li>`).join('');
     }
 
-    const imageStyle = recipe.image ? `background-image: url('${recipe.image}'), ${theme.color};` : `background: ${theme.color};`;
+    const imageStyle = recipe.image ? `background-image: url('${recipe.image}'), ${theme.color};` : `background-image: ${theme.color};`;
     const heroContent = recipe.image ? '' : `<span>${theme.emoji}</span>`;
 
     modalBody.innerHTML = `
