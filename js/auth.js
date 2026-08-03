@@ -35,6 +35,7 @@
           return null;
         }
         logAuth('Redirect result processed', { uid: result.user.uid, isNewUser: result.additionalUserInfo && result.additionalUserInfo.isNewUser });
+        if (document.getElementById('authModal')) closeAuthModal();
         return processGoogleResult(result);
       })
       .catch((error) => {
@@ -43,10 +44,15 @@
           return null;
         }
         console.error('Redirect sign-in result error:', error);
+        logAuth('Redirect sign-in result error', { code: error.code, message: error.message });
         if (error && error.code === 'auth/unauthorized-domain') {
           showToast('This domain is not authorized for sign-in. Please add it in Firebase console.');
-        } else if (error && error.code === 'auth/network-request-failed') {
+        } else if (error.code === 'auth/invalid-action-code') {
+          showToast('Sign-in action expired or is invalid. Please try again.');
+        } else if (error.code === 'auth/network-request-failed') {
           showToast('Network error. Please check your connection and try again.');
+        } else if (error.code === 'auth/operation-not-allowed') {
+          showToast('Google sign-in is not enabled. Please enable it in Firebase Console.');
         } else {
           showToast(getAuthErrorMessage(error.code) || 'Sign-in failed. Please try again.');
         }
@@ -606,29 +612,61 @@
   /* -------------------- Google Sign-In -------------------- */
   function handleGoogleSignIn() {
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    logAuth('Starting Google sign-in...');
     auth.signInWithPopup(provider)
       .then((result) => {
+        logAuth('Google popup sign-in successful', { uid: result.user.uid });
         return processGoogleResult(result);
       })
       .then(() => {
+        logAuth('Google sign-in processed');
         if (document.getElementById('authModal')) closeAuthModal();
       })
       .catch((error) => {
+        logAuth('Google sign-in error', { code: error.code, message: error.message });
         if (error.code && isPopupRedirectable(error.code)) {
-          auth.signInWithRedirect(provider);
-          return;
+          showToast('Popup blocked. Redirecting to Google...');
+          return auth.signInWithRedirect(provider).catch((redirectError) => {
+            logAuth('Google redirect sign-in error', { code: redirectError.code, message: redirectError.message });
+            if (redirectError.code === 'auth/unauthorized-domain') {
+              showToast('This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.');
+            } else if (redirectError.code === 'auth/invalid-action-code') {
+              showToast('Sign-in action expired or is invalid. Please try again.');
+            } else if (redirectError.code === 'auth/operation-not-allowed') {
+              showToast('Google sign-in is not enabled. Please enable it in Firebase Console.');
+            } else {
+              showToast(getAuthErrorMessage(redirectError.code) || 'Google sign-in failed. Please try again.');
+            }
+          });
         }
-        showToast(getAuthErrorMessage(error.code) || 'Google sign-in failed. Please try again.');
+        if (error.code === 'auth/unauthorized-domain') {
+          showToast('This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.');
+        } else if (error.code === 'auth/operation-not-allowed') {
+          showToast('Google sign-in is not enabled. Please enable it in Firebase Console.');
+        } else if (error.code === 'auth/invalid-action-code') {
+          showToast('Sign-in action expired or is invalid. Please try again.');
+        } else {
+          showToast(getAuthErrorMessage(error.code) || 'Google sign-in failed. Please try again.');
+        }
       });
   }
 
   function processGoogleResult(result) {
     const user = result.user;
+    if (!user) {
+      logAuth('processGoogleResult: no user in result');
+      return Promise.resolve();
+    }
     const isNewUser = result.additionalUserInfo && result.additionalUserInfo.isNewUser;
     const providerId = (result.additionalUserInfo && result.additionalUserInfo.providerId) || '';
     const provider = normalizeProvider(providerId);
+    logAuth('Processing Google result', { uid: user.uid, isNewUser: isNewUser, provider: provider });
+
+    const profileRef = database.ref('users/' + user.uid + '/profile');
     if (isNewUser) {
-      return database.ref('users/' + user.uid + '/profile').set({
+      return profileRef.set({
         name: user.displayName || 'User',
         email: user.email || '',
         region: 'Unknown',
@@ -636,14 +674,22 @@
         createdAt: firebase.database.ServerValue.TIMESTAMP,
         lastLogin: firebase.database.ServerValue.TIMESTAMP
       }).then(() => {
+        logAuth('New Google user profile created', { uid: user.uid });
         showToast('Account created successfully! Welcome to ZBH Pan & Plate.');
+      }).catch((error) => {
+        logAuth('Error creating Google user profile', { error: error.message });
+        showToast('Account created but profile setup failed. Please refresh.');
       });
     }
-    return database.ref('users/' + user.uid + '/profile').update({
+    return profileRef.update({
       lastLogin: firebase.database.ServerValue.TIMESTAMP,
       provider: provider
     }).then(() => {
+      logAuth('Existing Google user profile updated', { uid: user.uid });
       showToast('Welcome back! You are now signed in.');
+    }).catch((error) => {
+      logAuth('Error updating Google user profile', { error: error.message });
+      showToast('Welcome back! However, profile update failed.');
     });
   }
 
@@ -672,7 +718,13 @@
       'auth/internal-error': 'Internal error. Please try again',
       'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method',
       'auth/unauthorized-domain': 'This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.',
-      'auth/web-storage-unsupported': 'Browser storage unavailable. Please enable cookies and try again.'
+      'auth/web-storage-unsupported': 'Browser storage unavailable. Please enable cookies and try again.',
+      'auth/invalid-action-code': 'Sign-in action expired or is invalid. Please try again.',
+      'auth/invalid-oauth-client-id': 'Invalid OAuth client configuration. Please check Firebase Console.',
+      'auth/invalid-oauth-provider': 'Invalid OAuth provider. Please check Google Cloud Console.',
+      'auth/popup-blocked-by-browser': 'Popup was blocked by the browser. Please allow popups or use the redirect option.',
+      'auth/redirect-cancelled-by-user': 'Sign-in redirect was cancelled. Please try again.',
+      'auth/redirect-operation-pending': 'A redirect sign-in operation is already in progress. Please wait.'
     };
     return messages[code] || 'An error occurred. Please try again.';
   }
