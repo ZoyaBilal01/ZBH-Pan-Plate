@@ -513,8 +513,8 @@
 
   const SUCCESS_MESSAGES = {
     one: '✅ Application Submitted Successfully!',
-    two: '👨‍🍳 Your cooking dishes have been received and are now under review.',
-    three: '📱 If approved, the owner will contact you on WhatsApp with the PKR 500 payment details. After payment is confirmed, your official Cooking Certificate will be sent to you.'
+    two: '👨‍🍳 Your cooking dishes have been received.\nThe website owner will now review your cooking proof.',
+    three: '📱 If your application is approved, you will receive a WhatsApp message with the PKR 500 payment details.\nAfter payment is confirmed, your official ZBH Pan & Plate Cooking Certificate will be sent to you.'
   };
 
   function showSuccess() {
