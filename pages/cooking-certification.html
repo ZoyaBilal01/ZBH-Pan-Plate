@@ -205,6 +205,14 @@
             <!-- Error Message -->
             <div class="cert-error-message" id="certFormError"></div>
 
+            <!-- Upload Progress -->
+            <div class="cert-upload-progress" id="certUploadProgress">
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="certProgressBar"></div>
+              </div>
+              <div class="progress-text" id="certProgressText">Uploading… 0%</div>
+            </div>
+
             <!-- Form Actions -->
             <div class="cert-form-actions">
               <button type="submit" class="btn btn-primary cert-submit-btn" id="certSubmitBtn">
@@ -216,8 +224,8 @@
             <!-- Success Message -->
             <div class="cert-success" id="certSuccess">
               <div class="cert-success-icon">✅</div>
-              <h3 style="font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px;">Submission Received!</h3>
-              <p>Thank you! Your certification request has been submitted successfully. Our team will review your 5 recipe photos. If approved, your official certificate will be sent to your WhatsApp number after payment verification.</p>
+              <h3 class="cert-success-title">Application Submitted Successfully!</h3>
+              <div class="cert-success-body"></div>
             </div>
 
             <!-- Privacy Notice -->

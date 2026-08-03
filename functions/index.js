@@ -171,6 +171,7 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
   const city = String(data.city || '').trim();
   const country = String(data.country || '').trim();
   const whatsappNumber = String(data.whatsappNumber || '').trim();
+  const age = data.age != null ? String(data.age) : 'Not provided';
   const recipeNames = Array.isArray(data.recipeNames) ? data.recipeNames : [];
   const imagePaths = Array.isArray(data.imagePaths) ? data.imagePaths : [];
   const createdAt = formatTimestamp(data.createdAt || Date.now());
@@ -184,18 +185,32 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
   const storage = admin.storage();
   const bucket = storage.bucket();
 
+  const rawRequest = (context && context.rawRequest) || {};
+  const headers = (rawRequest.headers) || {};
+  const ip = headers['x-forwarded-for'] || headers['x-appengine-user-ip'] || (context && context.ip) || 'Not available';
+  const userAgent = headers['user-agent'] || 'Not available';
+  const acceptLang = headers['accept-language'] || 'Not available';
+
+  const siteUrl = (functions.config().app && functions.config().app.site_url) ? functions.config().app.site_url : 'zbhpanandplate.com';
+
   const downloadLinks = [];
   for (let i = 0; i < imagePaths.length; i++) {
     const path = imagePaths[i];
-    if (!path) continue;
+    const recipeName = recipeNames[i] || ('Recipe ' + (i + 1));
+    if (!path) {
+      downloadLinks.push({ label: recipeName, url: null, error: 'No file recorded' });
+      continue;
+    }
     try {
       const file = bucket.file(path);
-      const [metadata] = await file.getMetadata();
-      const contentType = metadata.contentType || 'image/jpeg';
-      const label = recipeNames[i] || ('Recipe ' + (i + 1));
-      downloadLinks.push({ label: label, contentType: contentType });
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 60 * 60 * 1000
+      });
+      downloadLinks.push({ label: recipeName, url: signedUrl });
     } catch (err) {
-      functions.logger.warn('notifyAdminCertification: could not stat file', { path: path, error: err.message });
+      functions.logger.warn('notifyAdminCertification: could not generate signed URL', { path: path, error: err.message });
+      downloadLinks.push({ label: recipeName, url: null, error: err.message });
     }
   }
 
@@ -206,15 +221,20 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
   const cityEsc = escapeHtml(city);
   const countryEsc = escapeHtml(country);
   const whatsappEsc = escapeHtml(whatsappNumber);
+  const ageEsc = escapeHtml(age);
   const createdAtEsc = escapeHtml(createdAt);
   const submissionIdEsc = escapeHtml(submissionId);
+  const ipEsc = escapeHtml(ip);
+  const uaEsc = escapeHtml(userAgent);
+  const langEsc = escapeHtml(acceptLang);
 
   let recipeLinksHtml = '';
-  for (let i = 0; i < recipeNames.length; i++) {
-    const name = recipeNames[i] || '';
-    if (!name) continue;
-    recipeLinksHtml += `<tr><td style="padding:4px 8px;">${escapeHtml(name)}</td>`;
-    recipeLinksHtml += `<td style="padding:4px 8px;">${downloadLinks[i] ? 'Available' : 'N/A'}</td></tr>`;
+  for (let i = 0; i < downloadLinks.length; i++) {
+    const dl = downloadLinks[i];
+    const linkHtml = dl.url
+      ? `<a href="${dl.url}" style="color:var(--primary);word-break:break-all;">View Photo ${i + 1}</a>`
+      : `<span style="color:#dc2626;">Photo ${i + 1} - unavailable</span>`;
+    recipeLinksHtml += `<tr><td style="padding:4px 8px;">${escapeHtml(dl.label)}</td><td style="padding:4px 8px;">${linkHtml}</td></tr>`;
   }
 
   const html = `
@@ -224,17 +244,21 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
         <tr><td style="padding:4px 8px;"><strong>Submission ID:</strong></td><td>${submissionIdEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>Name:</strong></td><td>${nameEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>Email:</strong></td><td>${emailEsc}</td></tr>
+        <tr><td style="padding:4px 8px;"><strong>WhatsApp:</strong></td><td>${whatsappEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>City:</strong></td><td>${cityEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>Country:</strong></td><td>${countryEsc}</td></tr>
-        <tr><td style="padding:4px 8px;"><strong>WhatsApp:</strong></td><td>${whatsappEsc}</td></tr>
+        <tr><td style="padding:4px 8px;"><strong>Age:</strong></td><td>${ageEsc}</td></tr>
         <tr><td style="padding:4px 8px;"><strong>Date &amp; Time:</strong></td><td>${createdAtEsc}</td></tr>
+        <tr><td style="padding:4px 8px;"><strong>IP Address:</strong></td><td>${ipEsc}</td></tr>
+        <tr><td style="padding:4px 8px;"><strong>User Agent:</strong></td><td>${uaEsc}</td></tr>
+        <tr><td style="padding:4px 8px;"><strong>Language:</strong></td><td>${langEsc}</td></tr>
       </table>
       <table style="border-collapse: collapse; margin-bottom: 16px;">
-        <tr><th style="padding:4px 8px;text-align:left;">Recipe Name</th><th style="padding:4px 8px;text-align:left;">Photo Status</th></tr>
+        <tr><th style="padding:4px 8px;text-align:left;">Recipe Name</th><th style="padding:4px 8px;text-align:left;">Photo</th></tr>
         ${recipeLinksHtml}
       </table>
-      <p style="margin-top: 16px;">Review this submission at: <a href="https://${functions.config().app && functions.config().app.site_url ? functions.config().app.site_url : 'zbhpanandplate.com'}/pages/certification-admin.html">Certification Admin Panel</a></p>
-      <p style="color:#888;font-size:12px;">This notification was sent from a secure backend (Firebase Cloud Functions). Personal information is used only for certificate verification.</p>
+      <p style="margin-top: 16px;">Review this submission at: <a href="https://${siteUrl}/pages/certification-admin.html">Certification Admin Panel</a></p>
+      <p style="color:#888;font-size:12px;">This notification was sent from a secure backend (Firebase Cloud Functions). Personal information is used only for certificate verification. Links expire in 1 hour.</p>
     </div>
   `;
 
@@ -243,14 +267,19 @@ exports.notifyAdminCertification = functions.https.onCall(async (data, context) 
     `Submission ID: ${submissionId}\n` +
     `Name: ${fullName}\n` +
     `Email: ${email}\n` +
+    `WhatsApp: ${whatsappNumber}\n` +
     `City: ${city}\n` +
     `Country: ${country}\n` +
-    `WhatsApp: ${whatsappNumber}\n` +
+    `Age: ${age}\n` +
     `Date & Time: ${createdAt}\n` +
+    `IP Address: ${ip}\n` +
+    `User Agent: ${userAgent}\n` +
+    `Language: ${acceptLang}\n` +
     `Recipe Names:\n${recipeNames.map((r, i) => `  ${i + 1}. ${r || '(empty)'}`).join('\n')}\n` +
     `Images: ${imagePaths.length} uploaded\n` +
-    `\nReview at: https://${functions.config().app && functions.config().app.site_url ? functions.config().app.site_url : 'zbhpanandplate.com'}/pages/certification-admin.html\n` +
-    `(Personal information is used only for certificate verification.)`;
+    `\nPhoto download links:\n${downloadLinks.map((dl, i) => `  ${i + 1}. ${dl.url || '(unavailable)'}`).join('\n')}\n` +
+    `\nReview at: https://${siteUrl}/pages/certification-admin.html\n` +
+    `(Personal information is used only for certificate verification. Links expire in 1 hour.)`;
 
   const msg = {
     to: to,
