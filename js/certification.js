@@ -103,6 +103,7 @@
   function compressImage(file, callback) {
     const img = new Image();
     img.onload = function () {
+      URL.revokeObjectURL(img.src);
       let { width, height } = img;
       const ratio = width / height;
 
@@ -119,12 +120,17 @@
 
       const mimeType = file.type === 'image/png' || file.type === 'image/webp' ? file.type : 'image/jpeg';
       canvas.toBlob(function (blob) {
+        if (!blob) {
+          console.error('[Certification] Canvas compression failed for file:', file.name);
+          callback(file);
+          return;
+        }
         blob.originalName = file.name;
         blob.lastModified = file.lastModified;
         callback(blob);
       }, mimeType, COMPRESS_QUALITY);
     };
-    img.onerror = function () { callback(file); };
+    img.onerror = function () { URL.revokeObjectURL(img.src); callback(file); };
     img.src = URL.createObjectURL(file);
   }
 
@@ -392,6 +398,7 @@
           refreshOverallProgress();
         },
         function (err) {
+          console.error('[Certification] Upload error for slot ' + slotIndex + ' (attempt ' + attempt + '):', err);
           if (attempt < MAX_RETRIES) {
             uploadProgress[slotIndex] = 0;
             setTimeout(function () {
@@ -413,6 +420,10 @@
   }
 
   async function uploadAllImages(submissionId) {
+    if (typeof firebase === 'undefined' || !firebase.storage) {
+      console.error('[Certification] Firebase Storage not available');
+      throw { type: 'upload', slot: -1, error: 'Firebase Storage not available' };
+    }
     const storage = firebase.storage();
     const bucket = storage.ref();
 
@@ -422,7 +433,6 @@
       if (item) uploadProgress[item.slot] = 0;
     });
     refreshOverallProgress();
-
     const uploadPromises = compressedList.map(function (item) {
       if (!item) return Promise.resolve(null);
 
@@ -586,7 +596,12 @@
         updatedAt: timestamp
       };
 
-      await firebase.database().ref('certifications/' + submissionId).set(submissionData);
+      try {
+        await firebase.database().ref('certifications/' + submissionId).set(submissionData);
+      } catch (dbErr) {
+        console.error('[Certification] Failed to save submission to RTDB:', dbErr);
+        throw { type: 'db', error: dbErr };
+      }
 
       setStep('Sending Email…');
       updateProgressBar(70, 'Sending Email…');
@@ -596,12 +611,12 @@
         await sendEmailViaEmailJS(submissionId, formData, recipeNames, uploadResults);
         emailSent = true;
       } catch (emailjsErr) {
-        console.warn('EmailJS failed, falling back to SendGrid:', emailjsErr);
+        console.error('[Certification] EmailJS failed, falling back to SendGrid:', emailjsErr);
         try {
           await sendEmailViaFunction(submissionId, formData, recipeNames, imagePaths);
           emailSent = true;
         } catch (funcErr) {
-          console.warn('SendGrid fallback also failed:', funcErr);
+          console.error('[Certification] SendGrid fallback also failed:', funcErr);
         }
       }
 
@@ -613,7 +628,7 @@
           hideUploadProgress();
           setStep('');
           showSuccess();
-        }, 500);
+        }, 100);
       } else {
         hideUploadProgress();
         setStep('');

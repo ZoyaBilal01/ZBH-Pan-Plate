@@ -6,9 +6,9 @@ service firebase.storage {
     // - Only the admin (zoyabilal01@gmail.com) can read/download images
     // - No deletes or updates from client (admin operations go through Cloud Functions)
     match /certifications/{submissionId}/{imageIndex} {
-      allow write: if request.resource != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/(jpeg|png|jpg)');
+       allow write: if request.resource != null
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/(jpeg|png|jpg|webp)');
       allow read: if request.auth != null
                   && (request.auth.token.email === 'zoyabilal01@gmail.com'
                       || root.child('certificationAdmins').child(request.auth.uid).val() == true);
