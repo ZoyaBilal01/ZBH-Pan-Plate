@@ -13,6 +13,8 @@
     if (path.includes('/pages/favorites.html')) return 'favorites';
     if (path.includes('/pages/fridge.html')) return 'fridge';
     if (path.includes('/pages/diet-plans.html')) return 'diet-plans';
+    if (path.includes('/pages/cooking-certification.html')) return 'certification';
+    if (path.includes('/pages/certification-admin.html')) return 'certification-admin';
     if (path.includes('/pages/about.html')) return 'about';
     if (path.includes('/pages/contact.html')) return 'contact';
      if (path.includes('/pages/login.html')) return 'login';
@@ -28,6 +30,7 @@
   let favorites = JSON.parse(localStorage.getItem('zbh_favorites') || '[]');
   let activeCategory = '';
   let homeRenderFn = null;
+  let currentPageRender = null;
 
   /* -------------------- Shared Init -------------------- */
   SharedComponents.initShared(currentPage);
@@ -214,6 +217,7 @@
 
     activeCategory = heroCategoryFilter.value || '';
     homeRenderFn(activeCategory);
+    currentPageRender = homeRenderFn;
   }
 
   /* -------------------- Browse Page -------------------- */
@@ -259,6 +263,7 @@
     browseSort.addEventListener('change', renderBrowse);
 
     renderBrowse();
+    currentPageRender = renderBrowse;
   }
 
   /* -------------------- Favorites Page -------------------- */
@@ -287,9 +292,9 @@
     });
 
     renderFavorites();
+    currentPageRender = renderFavorites;
 
     document.addEventListener('favorites:updated', renderFavorites);
-    document.addEventListener('auth:favoritesUpdated', renderFavorites);
   }
 
   /* -------------------- Fridge Finder Page -------------------- */
@@ -860,9 +865,7 @@
   /* -------------------- Favorites Sync -------------------- */
   document.addEventListener('auth:favoritesUpdated', () => {
     favorites = JSON.parse(localStorage.getItem('zbh_favorites') || '[]');
-    if (currentPage === 'home') renderHome();
-    if (currentPage === 'browse') renderBrowse();
-    if (currentPage === 'favorites') renderFavorites();
+    if (typeof currentPageRender === 'function') currentPageRender();
   });
 
   /* -------------------- Start -------------------- */

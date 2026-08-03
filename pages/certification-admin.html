@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certification Admin - ZBH Pan & Plate</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .cert-admin-bar { display: flex; gap: 12px; align-items: center; margin: 20px 0; flex-wrap: wrap; }
+    .cert-admin-bar .search-input { max-width: 320px; flex: 1; }
+    .cert-admin-summary { font-size: 0.9rem; color: var(--text-light); margin-bottom: 12px; }
+    .cert-admin-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+    .cert-admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .cert-admin-table th, .cert-admin-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .cert-admin-table th { background: var(--surface-alt); font-weight: 600; color: var(--text); }
+    .cert-admin-table tbody tr:hover td { background: var(--surface-alt); }
+    .cert-admin-table th[data-sort="asc"]::after { content: " \u25B2"; }
+    .cert-admin-table th[data-sort="desc"]::after { content: " \u25BC"; }
+    .cert-admin-table td a { color: var(--primary); text-decoration: none; cursor: pointer; }
+    .cert-admin-table td a:hover { text-decoration: underline; }
+    .cert-admin-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .cert-admin-filters label { font-size: 0.85rem; color: var(--text); margin-right: 4px; }
+    .cert-admin-filters select { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 0.85rem; cursor: pointer; outline: none; }
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <main class="main-content">
+    <section class="page page-certification-admin active" id="page-certification-admin">
+      <div class="container">
+        <h1 class="page-title">Certification Requests</h1>
+        <p class="page-subtitle">Review and manage cooking certification submissions. Restricted to administrators.</p>
+
+        <div id="certAdminGate" style="display:block;">
+          <div class="auth-placeholder">
+            <p>Checking access...</p>
+          </div>
+        </div>
+
+        <div id="certAdminPanel" style="display:none;">
+          <div class="cert-admin-summary" id="certAdminSummary"></div>
+          <div class="cert-admin-filters">
+            <label for="certAdminStatusFilter">Filter by status:</label>
+            <select id="certAdminStatusFilter">
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <label for="certAdminIssuedFilter" style="margin-left: 12px;">Show issued only:</label>
+            <select id="certAdminIssuedFilter">
+              <option value="all">All</option>
+              <option value="issued">Issued</option>
+              <option value="not-issued">Not Issued</option>
+            </select>
+          </div>
+          <div class="cert-admin-bar">
+            <input type="text" class="search-input" id="certAdminSearch" placeholder="Search by name or email..." autocomplete="off">
+            <button class="btn btn-secondary" id="certAdminRefresh" type="button">Refresh</button>
+          </div>
+          <div class="cert-admin-table-wrap">
+            <table class="cert-admin-table">
+              <thead>
+                <tr>
+                  <th data-col="submittedAt" data-sort>DATE</th>
+                  <th data-col="fullName" data-sort>NAME</th>
+                  <th data-col="email" data-sort>EMAIL</th>
+                  <th data-col="city" data-col>CITY</th>
+                  <th data-col="country" data-col>COUNTRY</th>
+                  <th data-col="whatsappNumber" data-col>WHATSAPP</th>
+                  <th>RECIPES</th>
+                  <th data-col="status" data-sort>STATUS</th>
+                  <th data-col="certificateIssued" data-col>CERTIFICATE</th>
+                  <th>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody id="certAdminTableBody">
+                <tr><td colspan="10" style="padding:16px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-placeholder"></div>
+  <div id="modals-placeholder"></div>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+  <!-- Firebase Configuration -->
+  <script src="../js/firebase-config.js"></script>
+
+  <!-- Auth Module -->
+  <script src="../js/auth.js"></script>
+
+  <!-- Shared Components -->
+  <script src="../js/common.js"></script>
+
+  <!-- Main Controller -->
+  <script src="../js/main.js"></script>
+
+  <!-- Certification Admin Controller -->
+  <script src="../js/certification-admin.js"></script>
+</body>
+</html>

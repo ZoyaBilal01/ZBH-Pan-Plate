@@ -15,6 +15,7 @@ const SharedComponents = (function () {
       { id: 'favorites', label: 'Favorites', href: prefix + 'pages/favorites.html' },
       { id: 'fridge', label: 'Fridge Finder', href: prefix + 'pages/fridge.html' },
       { id: 'diet-plans', label: 'Diet Plans', href: prefix + 'pages/diet-plans.html' },
+      { id: 'certification', label: 'Cooking Certification', href: prefix + 'pages/cooking-certification.html' },
       { id: 'about', label: 'About', href: prefix + 'pages/about.html' },
       { id: 'contact', label: 'Contact', href: prefix + 'pages/contact.html' }
     ];
