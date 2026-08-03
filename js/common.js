@@ -410,12 +410,12 @@ const SharedComponents = (function () {
       ingredientsHtml = (recipe.ingredients || []).map(i => `<li>${i}</li>`).join('');
     }
 
-    const imageStyle = recipe.image ? `background-image: url('${recipe.image}'), ${theme.color};` : `background-image: ${theme.color};`;
-    const heroContent = recipe.image ? '' : `<span>${theme.emoji}</span>`;
+    const heroStyle = recipe.image ? '' : `background-image: ${theme.color};`;
+    const heroHtml = recipe.image ? `<img src="${recipe.image}" alt="${recipe.name}" class="modal-hero-img">` : `<span>${theme.emoji}</span>`;
 
     modalBody.innerHTML = `
-      <div class="modal-hero" style="${imageStyle}">
-        ${heroContent}
+      <div class="modal-hero" style="${heroStyle}">
+        ${heroHtml}
       </div>
       <div class="modal-header">
         <h2>${recipe.name}</h2>
