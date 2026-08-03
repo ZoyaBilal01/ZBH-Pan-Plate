@@ -367,24 +367,15 @@
     const avg = values.length > 0 ? total / values.length : 0;
     const completed = Object.keys(uploadProgress).filter(function (k) { return uploadProgress[k] >= 100; }).length;
     const current = Math.min(completed + 1, MAX_IMAGES);
-    updateProgressBar(avg, 'Image ' + current + ' of ' + MAX_IMAGES);
-  }
-
-  /* -------------------- Parallel upload with retry -------------------- */
-
-  async function compressAllImages() {
-    const promises = [];
-    for (let i = 0; i < MAX_IMAGES; i++) {
-      const file = uploadedFiles[i];
-      if (!file) { promises.push(Promise.resolve(null)); continue; }
-      promises.push(new Promise(function (resolve) {
-        compressImage(file, function (compressed) {
-          resolve({ slot: i, file: compressed, originalName: file.name });
-        });
-      }));
+    const pct = Math.round(avg);
+    if (pct >= 100) {
+      updateProgressBar(100, 'Completed Successfully');
+    } else {
+      updateProgressBar(pct, 'Image ' + current + ' of ' + MAX_IMAGES);
     }
-    return Promise.all(promises);
   }
+
+  /* -------------------- Compress + upload each image interleaved -------------------- */
 
   function uploadWithRetry(storageRef, file, slotIndex, attempt) {
     attempt = attempt || 1;
@@ -403,7 +394,7 @@
             uploadProgress[slotIndex] = 0;
             setTimeout(function () {
               uploadWithRetry(storageRef, file, slotIndex, attempt + 1).then(resolve, reject);
-            }, 1000);
+            }, 500);
           } else {
             uploadProgress[slotIndex] = 0;
             delete uploadProgress[slotIndex];
@@ -419,6 +410,35 @@
     });
   }
 
+  function compressAndUpload(file, slotIndex, submissionId, bucket) {
+    return new Promise(function (resolve, reject) {
+      compressImage(file, function (compressed) {
+        if (!compressed) {
+          reject({ slot: slotIndex, error: new Error('Compression failed') });
+          return;
+        }
+
+        const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = submissionId + '/' + slotIndex + '_' + originalName;
+        const storageRef = bucket.child('certifications/' + fileName);
+
+        uploadWithRetry(storageRef, compressed, slotIndex)
+          .then(function () {
+            return storageRef.getDownloadURL();
+          })
+          .then(function (url) {
+            uploadedUrls[slotIndex] = url;
+            console.log('[Certification] Slot ' + slotIndex + ' uploaded successfully');
+            resolve({ slot: slotIndex, path: 'certifications/' + fileName, name: file.name, url: url });
+          })
+          .catch(function (err) {
+            setSlotError(slotIndex, 'Upload failed after ' + MAX_RETRIES + ' attempts.');
+            reject(err);
+          });
+      });
+    });
+  }
+
   async function uploadAllImages(submissionId) {
     if (typeof firebase === 'undefined' || !firebase.storage) {
       console.error('[Certification] Firebase Storage not available');
@@ -428,29 +448,15 @@
     const bucket = storage.ref();
 
     setStep('Uploading…');
-    const compressedList = await compressAllImages();
-    compressedList.forEach(function (item) {
-      if (item) uploadProgress[item.slot] = 0;
-    });
+
+    const uploadPromises = [];
+    for (let i = 0; i < MAX_IMAGES; i++) {
+      const file = uploadedFiles[i];
+      if (!file) { uploadPromises.push(Promise.resolve(null)); continue; }
+      uploadProgress[i] = 0;
+      uploadPromises.push(compressAndUpload(file, i, submissionId, bucket));
+    }
     refreshOverallProgress();
-    const uploadPromises = compressedList.map(function (item) {
-      if (!item) return Promise.resolve(null);
-
-      const fileName = submissionId + '/' + item.slot + '_' + item.originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storageRef = bucket.child('certifications/' + fileName);
-
-      return uploadWithRetry(storageRef, item.file, item.slot)
-        .then(async function () {
-          const url = await storageRef.getDownloadURL();
-          uploadedUrls[item.slot] = url;
-          return { slot: item.slot, path: 'certifications/' + fileName, name: item.originalName, url: url };
-        })
-        .catch(function (err) {
-          uploadErrors[err.slot] = err.error;
-          setSlotError(err.slot, 'Upload failed after ' + MAX_RETRIES + ' attempts.');
-          throw err;
-        });
-    });
 
     let results = [];
     try {

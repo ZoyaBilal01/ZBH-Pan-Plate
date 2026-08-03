@@ -271,10 +271,13 @@
   <!-- Main Controller -->
   <script src="../js/main.js"></script>
 
-  <!-- Certification Page Logic -->
+   <!-- Certification Page Logic -->
   <script src="../js/certification.js"></script>
 
-  <!-- EmailJS Integration (fallback when Firebase backend is not configured) -->
+  <!-- EmailJS SDK (preloaded for immediate email sending on form submit) -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@4/dist/emailjs.min.js"></script>
+
+  <!-- EmailJS Integration -->
   <script src="../js/emailjs-config.js"></script>
 </body>
 </html>
