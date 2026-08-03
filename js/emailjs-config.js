@@ -1,46 +1,53 @@
 /* ==========================================================================
-   ZBH Pan & Plate — EmailJS Configuration
-   
-   For static hosting (GitHub Pages) where no backend is available, this module
-   integrates EmailJS as a fallback email provider. When a Firebase backend
-   exists (Cloud Functions + SendGrid), the keys are stored in Functions
-   environment config and retrieved via a secure callable — they are NEVER
-   hardcoded in this file.
-
-   Setup (store keys in Firebase Functions config):
-     firebase functions:config --set emailjs.public_key="YOUR_KEY" \
-       emailjs.service_id="YOUR_SERVICE_ID" \
-       emailjs.template_id="YOUR_TEMPLATE_ID"
-
-   Then deploy: firebase deploy --only functions
-
-   To use the EmailJS fallback directly (not recommended for production
-   when a backend exists), set window.__EMAILJS_FALLBACK__ = {
-     publicKey: '...', serviceId: '...', templateId: '...'
-   } before this script loads.
+   ZBH Pan & Plate — EmailJS Integration
+   Uses the website owner's EmailJS credentials for client-side email sending.
+    The public key is designed for frontend use; Service ID and Template ID
+   control what emails can be sent and to whom.
    ========================================================================== */
 
 (function () {
   'use strict';
 
-  let _config = null;
+  const EMAILJS_CONFIG = {
+    publicKey: 'bT9lDDE2RTnAELUSl',
+    serviceId: 'service_1olscao',
+    templateId: 'template_kakm23g'
+  };
+
   let _sdkLoaded = false;
+  let _sdkError = null;
 
   function loadEmailJsSdk(callback) {
     if (typeof window.emailjs !== 'undefined') {
       _sdkLoaded = true;
-      callback();
+      if (typeof window.emailjs.init === 'function') {
+        try { window.emailjs.init(EMAILJS_CONFIG.publicKey); } catch (e) { _sdkError = e; }
+      }
+      callback(_sdkError || null);
       return;
     }
+
+    var existing = document.querySelector('script[data-emailjs-sdk]');
+    if (existing) {
+      existing.addEventListener('load', function () {
+        _sdkLoaded = true;
+        try { window.emailjs.init(EMAILJS_CONFIG.publicKey); } catch (e) { _sdkError = e; }
+        callback(_sdkError || null);
+      });
+      existing.addEventListener('error', function () { callback(new Error('EmailJS SDK failed to load')); });
+      return;
+    }
+
     var script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/emailjs-com@4/dist/emailjs.min.js';
+    script.setAttribute('data-emailjs-sdk', 'true');
+    script.async = true;
     script.onload = function () {
       _sdkLoaded = true;
-      if (typeof window.emailjs !== 'undefined') {
-        callback();
-      } else {
-        callback(new Error('EmailJS SDK failed to load'));
+      if (typeof window.emailjs !== 'undefined' && typeof window.emailjs.init === 'function') {
+        try { window.emailjs.init(EMAILJS_CONFIG.publicKey); } catch (e) { _sdkError = e; }
       }
+      callback(_sdkError || null);
     };
     script.onerror = function () {
       callback(new Error('Failed to load EmailJS SDK'));
@@ -48,36 +55,32 @@
     document.head.appendChild(script);
   }
 
-  function getConfigViaFunction() {
-    return firebase.functions().httpsCallable('getEmailJsConfig')()
-      .then(function (result) {
-        if (result.data && result.data.configured) {
-          return result.data;
-        }
-        return null;
-      })
-      .catch(function () {
-        return null;
-      });
-  }
-
-  function sendViaEmailJs(config, params) {
+  function sendEmail(templateParams) {
     return new Promise(function (resolve, reject) {
-      loadEmailJsSdk(function (err) {
-        if (err) return reject(err);
-        if (typeof window.emailjs === 'undefined') return reject(new Error('EmailJS not available'));
-        window.emailjs.init(config.publicKey);
-        window.emailjs.send(config.serviceId, config.templateId, params)
-          .then(function () { resolve(); })
-          .catch(function (e) { reject(e); });
-      });
+      if (!_sdkLoaded) {
+        loadEmailJsSdk(function (err) {
+          if (err) return reject(err);
+          doSend(templateParams, resolve, reject);
+        });
+      } else {
+        doSend(templateParams, resolve, reject);
+      }
     });
+
+    function doSend(params, resolve, reject) {
+      if (typeof window.emailjs === 'undefined') {
+        return reject(new Error('EmailJS SDK not available'));
+      }
+      window.emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, params)
+        .then(function (response) { resolve(response); })
+        .catch(function (error) { reject(error); });
+    }
   }
 
   window.EmailJSConfig = {
+    config: EMAILJS_CONFIG,
     loadEmailJsSdk: loadEmailJsSdk,
-    getConfigViaFunction: getConfigViaFunction,
-    sendViaEmailJs: sendViaEmailJs,
+    sendEmail: sendEmail,
     getSdkLoaded: function () { return _sdkLoaded; }
   };
 })();

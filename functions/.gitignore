@@ -1,0 +1,6 @@
+# Dependencies
+node_modules/
+
+# Firebase local runtime config (contains secret keys like SendGrid API key)
+# NEVER commit this file — it holds sensitive credentials
+.runtimeconfig.json

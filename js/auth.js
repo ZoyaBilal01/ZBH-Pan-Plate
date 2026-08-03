@@ -34,27 +34,37 @@
           logAuth('No redirect result user found');
           return null;
         }
-        logAuth('Redirect result processed', { uid: result.user.uid, isNewUser: result.additionalUserInfo && result.additionalUserInfo.isNewUser });
+        logAuth('Redirect result processed', { uid: result.user.uid, isNewUser: (result.additionalUserInfo && result.additionalUserInfo.isNewUser) || false });
         if (document.getElementById('authModal')) closeAuthModal();
         return processGoogleResult(result);
+      })
+      .then(() => {
+        logAuth('Google sign-in fully processed');
+        if (document.getElementById('authModal')) closeAuthModal();
       })
       .catch((error) => {
         if (error && error.code === 'auth/no-auth-result') {
           logAuth('No pending redirect result (normal on initial load)');
           return null;
         }
-        console.error('Redirect sign-in result error:', error);
         logAuth('Redirect sign-in result error', { code: error.code, message: error.message });
-        if (error && error.code === 'auth/unauthorized-domain') {
-          showToast('This domain is not authorized for sign-in. Please add it in Firebase console.');
+
+        if (error.code === 'auth/account-exists-with-different-credential') {
+          const email = error.email || 'this email';
+          logAuth('Account exists with different credential', { email: email });
+          showToast('An account already exists for ' + email + ' with a different sign-in method. Please sign in with that method instead.');
+        } else if (error.code === 'auth/unauthorized-domain') {
+          showToast('This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.');
         } else if (error.code === 'auth/invalid-action-code') {
           showToast('Sign-in action expired or is invalid. Please try again.');
         } else if (error.code === 'auth/network-request-failed') {
           showToast('Network error. Please check your connection and try again.');
         } else if (error.code === 'auth/operation-not-allowed') {
           showToast('Google sign-in is not enabled. Please enable it in Firebase Console.');
+        } else if (error.code === 'auth/user-mismatch') {
+          showToast('The Google account does not match the previously signed-in account. Please try again.');
         } else {
-          showToast(getAuthErrorMessage(error.code) || 'Sign-in failed. Please try again.');
+          showToast(getAuthErrorMessage(error));
         }
         return null;
       });
@@ -72,17 +82,6 @@
   function normalizeProvider(providerId) {
     if (!providerId) return 'email';
     return providerId === 'google.com' ? 'google' : 'password';
-  }
-
-  const POPUP_REDIRECTABLE_CODES = [
-    'auth/popup-blocked',
-    'auth/popup-closed-by-user',
-    'auth/cancelled-popup-request',
-    'auth/timeout'
-  ];
-
-  function isPopupRedirectable(code) {
-    return POPUP_REDIRECTABLE_CODES.indexOf(code) !== -1;
   }
 
   let currentAuthView = 'login';
@@ -106,6 +105,20 @@
 
     if (authButtons) authButtons.style.display = 'none';
     if (userMenu) userMenu.style.display = 'flex';
+
+    // Close auth modal if it's still open (e.g. session restored after
+    // refresh on the login page, or sign-in completed via redirect)
+    const authModal = document.getElementById('authModal');
+    if (authModal && authModal.classList.contains('open')) {
+      closeAuthModal();
+    }
+
+    // If the user is on a dedicated login/signup page, redirect to home
+    var path = window.location.pathname;
+    if (path.indexOf('/pages/login.html') !== -1 || path.indexOf('/pages/signup.html') !== -1) {
+      window.location.href = '../index.html';
+      return;
+    }
 
     const displayName = user.displayName || 'User';
     const email = user.email || '';
@@ -145,25 +158,30 @@
   }
 
   /* -------------------- Favorites Sync -------------------- */
-  function syncFavoritesFromFirebase(uid) {
-    if (favoritesSynced) return;
-    const localFavorites = JSON.parse(localStorage.getItem('zbh_favorites') || '[]');
+   function syncFavoritesFromFirebase(uid) {
+     if (favoritesSynced) return;
+     const localFavorites = JSON.parse(localStorage.getItem('zbh_favorites') || '[]');
 
-    database.ref('users/' + uid + '/favorites').once('value').then((snapshot) => {
-      const firebaseFavorites = snapshot.val() || [];
-      if (firebaseFavorites.length > 0) {
-        const merged = [...new Set([...localFavorites, ...firebaseFavorites])];
-        localStorage.setItem('zbh_favorites', JSON.stringify(merged));
-        database.ref('users/' + uid + '/favorites').set(merged);
-      } else if (localFavorites.length > 0) {
-        database.ref('users/' + uid + '/favorites').set(localFavorites);
-      }
-      favoritesSynced = true;
-      document.dispatchEvent(new CustomEvent('auth:favoritesUpdated'));
-    }).catch((error) => {
-      console.error('Error syncing favorites:', error);
-    });
-  }
+     database.ref('users/' + uid + '/favorites').once('value').then((snapshot) => {
+       const raw = snapshot.val();
+       // RTDB stores JS arrays as objects with numeric keys ({0:"id",1:"id"});
+       // convert back to a proper array so .length and spread work correctly.
+       const firebaseFavorites = (raw && typeof raw === 'object')
+         ? Object.values(raw)
+         : [];
+       if (firebaseFavorites.length > 0) {
+         const merged = [...new Set([...localFavorites, ...firebaseFavorites])];
+         localStorage.setItem('zbh_favorites', JSON.stringify(merged));
+         database.ref('users/' + uid + '/favorites').set(merged);
+       } else if (localFavorites.length > 0) {
+         database.ref('users/' + uid + '/favorites').set(localFavorites);
+       }
+       favoritesSynced = true;
+       document.dispatchEvent(new CustomEvent('auth:favoritesUpdated'));
+     }).catch((error) => {
+       console.error('Error syncing favorites:', error);
+     });
+   }
 
   function saveFavoritesToFirebase(uid, favoritesArray) {
     return database.ref('users/' + uid + '/favorites').set(favoritesArray);
@@ -459,6 +477,31 @@
   }
 
   /* -------------------- Auth Handlers -------------------- */
+  function handleLoginError(error) {
+    logAuth('Login error', { code: error.code, message: error.message });
+    if (error.code === 'auth/user-not-found') {
+      showFieldError('loginEmail', 'No account found with this email');
+    } else if (error.code === 'auth/wrong-password') {
+      showFieldError('loginPassword', 'Incorrect password');
+    } else if (error.code === 'auth/invalid-email') {
+      showFieldError('loginEmail', 'Please enter a valid email address');
+    } else if (error.code === 'auth/user-disabled') {
+      showFieldError('loginEmail', 'This account has been disabled');
+    } else if (error.code === 'auth/invalid-credential') {
+      showFieldError('loginPassword', 'Incorrect email or password');
+    } else if (error.code === 'auth/operation-not-allowed') {
+      showFieldError('loginEmail', 'Email/password accounts are not enabled.');
+    } else if (error.code === 'auth/too-many-requests') {
+      showFieldError('loginPassword', 'Too many failed attempts. Please try again later.');
+    } else if (error.code === 'auth/network-request-failed') {
+      showToast('Network error. Please check your connection and try again.');
+    } else if (error.code === 'auth/unauthorized-domain') {
+      showToast('This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.');
+    } else {
+      showFieldError('loginPassword', getAuthErrorMessage(error));
+    }
+  }
+
   function handleLogin(e) {
     e.preventDefault();
     clearAllErrors('loginForm');
@@ -487,17 +530,34 @@
         if (user) {
           database.ref('users/' + user.uid + '/profile')
             .update({ lastLogin: firebase.database.ServerValue.TIMESTAMP, provider: 'email' })
-            .catch(() => {});
+            .catch((err) => logAuth('Could not update lastLogin in RTDB', { error: err.message }));
         }
         showToast('Welcome back! You are now signed in.');
         closeAuthModal();
       })
-      .catch((error) => {
-        showFieldError('loginPassword', getAuthErrorMessage(error.code));
-      })
+      .catch(handleLoginError)
       .finally(() => {
         setButtonLoading('loginSubmitBtn', false);
       });
+  }
+
+  function handleSignupAuthError(error) {
+    logAuth('Signup auth error', { code: error.code, message: error.message });
+    if (error.code === 'auth/email-already-in-use') {
+      showFieldError('signupEmail', 'This email is already registered. Try signing in instead.');
+    } else if (error.code === 'auth/invalid-email') {
+      showFieldError('signupEmail', 'Please enter a valid email address');
+    } else if (error.code === 'auth/weak-password') {
+      showFieldError('signupPassword', 'Password must be at least 6 characters');
+    } else if (error.code === 'auth/operation-not-allowed') {
+      showFieldError('signupEmail', 'Email/password accounts are not enabled.');
+    } else if (error.code === 'auth/network-request-failed') {
+      showToast('Network error. Please check your connection and try again.');
+    } else if (error.code === 'auth/unauthorized-domain') {
+      showToast('This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.');
+    } else {
+      showFieldError('signupEmail', getAuthErrorMessage(error));
+    }
   }
 
   function handleSignup(e) {
@@ -540,29 +600,30 @@
     auth.createUserWithEmailAndPassword(email, password)
       .then((userCredential) => {
         const user = userCredential.user;
+        // Auth account created — now save profile to RTDB
         return user.updateProfile({ displayName: name })
           .then(() => {
-             return database.ref('users/' + user.uid + '/profile').set({
-               name: name,
-               email: email,
-               region: region,
-               provider: 'email',
-               createdAt: firebase.database.ServerValue.TIMESTAMP,
-               lastLogin: firebase.database.ServerValue.TIMESTAMP
-             });
+            return database.ref('users/' + user.uid + '/profile').set({
+              name: name,
+              email: email,
+              region: region,
+              provider: 'email',
+              createdAt: firebase.database.ServerValue.TIMESTAMP,
+              lastLogin: firebase.database.ServerValue.TIMESTAMP
+            });
+          })
+          .then(() => {
+            showToast('Account created successfully! Welcome to ZBH Pan & Plate.');
+            closeAuthModal();
+          })
+          .catch((dbError) => {
+            // Auth succeeded but profile DB write failed — account still exists
+            logAuth('Signup profile DB write failed', { error: dbError.message });
+            showToast('Account created! But profile setup failed. Please refresh and try logging in.');
+            closeAuthModal();
           });
       })
-      .then(() => {
-        showToast('Account created successfully! Welcome to ZBH Pan & Plate.');
-        closeAuthModal();
-      })
-      .catch((error) => {
-        if (error.code === 'auth/email-already-in-use') {
-          showFieldError('signupEmail', 'This email is already registered');
-        } else {
-          showFieldError('signupEmail', getAuthErrorMessage(error.code));
-        }
-      })
+      .catch(handleSignupAuthError)
       .finally(() => {
         setButtonLoading('signupSubmitBtn', false);
       });
@@ -590,7 +651,8 @@
         renderAuthModal();
       })
       .catch((error) => {
-        showFieldError('forgotEmail', getAuthErrorMessage(error.code));
+        logAuth('Forgot password error', { code: error.code, message: error.message });
+        showFieldError('forgotEmail', getAuthErrorMessage(error));
       })
       .finally(() => {
         setButtonLoading('forgotSubmitBtn', false);
@@ -604,8 +666,8 @@
         favoritesSynced = false;
       })
       .catch((error) => {
-        console.error('Logout error:', error);
-        showToast('Logout failed. Please try again.');
+        logAuth('Logout error', { code: error.code, message: error.message });
+        showToast('Logout failed: ' + getAuthErrorMessage(error));
       });
   }
 
@@ -614,33 +676,17 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
     logAuth('Starting Google sign-in...');
-    auth.signInWithPopup(provider)
-      .then((result) => {
-        logAuth('Google popup sign-in successful', { uid: result.user.uid });
-        return processGoogleResult(result);
-      })
-      .then(() => {
-        logAuth('Google sign-in processed');
-        if (document.getElementById('authModal')) closeAuthModal();
-      })
+
+    // signInWithRedirect is the most reliable method on HTTPS static hosts
+    // (GitHub Pages, Vercel, Netlify) and mobile browsers where
+    // signInWithPopup is silently blocked by popup blockers.
+    auth.signInWithRedirect(provider)
       .catch((error) => {
-        logAuth('Google sign-in error', { code: error.code, message: error.message });
-        if (error.code && isPopupRedirectable(error.code)) {
-          showToast('Popup blocked. Redirecting to Google...');
-          return auth.signInWithRedirect(provider).catch((redirectError) => {
-            logAuth('Google redirect sign-in error', { code: redirectError.code, message: redirectError.message });
-            if (redirectError.code === 'auth/unauthorized-domain') {
-              showToast('This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.');
-            } else if (redirectError.code === 'auth/invalid-action-code') {
-              showToast('Sign-in action expired or is invalid. Please try again.');
-            } else if (redirectError.code === 'auth/operation-not-allowed') {
-              showToast('Google sign-in is not enabled. Please enable it in Firebase Console.');
-            } else {
-              showToast(getAuthErrorMessage(redirectError.code) || 'Google sign-in failed. Please try again.');
-            }
-          });
-        }
+        logAuth('Google redirect sign-in error', { code: error.code, message: error.message });
         if (error.code === 'auth/unauthorized-domain') {
           showToast('This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.');
         } else if (error.code === 'auth/operation-not-allowed') {
@@ -648,7 +694,7 @@
         } else if (error.code === 'auth/invalid-action-code') {
           showToast('Sign-in action expired or is invalid. Please try again.');
         } else {
-          showToast(getAuthErrorMessage(error.code) || 'Google sign-in failed. Please try again.');
+          showToast(getAuthErrorMessage(error));
         }
       });
   }
@@ -698,7 +744,9 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  function getAuthErrorMessage(code) {
+  function getAuthErrorMessage(error) {
+    const code = (error && error.code) || 'unknown';
+    const message = (error && error.message) || '';
     const messages = {
       'auth/invalid-email': 'Invalid email address format',
       'auth/user-disabled': 'This account has been disabled',
@@ -713,20 +761,38 @@
       'auth/user-mismatch': 'User mismatch',
       'auth/credential-already-in-use': 'Credential already in use',
       'auth/popup-closed-by-user': 'Popup closed by user',
-      'auth/popup-blocked': 'Popup blocked by browser. Trying redirect instead...',
+      'auth/popup-blocked': 'Popup blocked by browser',
       'auth/cancelled-popup-request': 'Sign-in cancelled',
-      'auth/internal-error': 'Internal error. Please try again',
+      'auth/internal-error': 'Internal server error. Please try again later',
       'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method',
       'auth/unauthorized-domain': 'This domain is not authorized. Please add it in Firebase Console > Authentication > Settings > Authorized domains.',
       'auth/web-storage-unsupported': 'Browser storage unavailable. Please enable cookies and try again.',
       'auth/invalid-action-code': 'Sign-in action expired or is invalid. Please try again.',
       'auth/invalid-oauth-client-id': 'Invalid OAuth client configuration. Please check Firebase Console.',
       'auth/invalid-oauth-provider': 'Invalid OAuth provider. Please check Google Cloud Console.',
-      'auth/popup-blocked-by-browser': 'Popup was blocked by the browser. Please allow popups or use the redirect option.',
-      'auth/redirect-cancelled-by-user': 'Sign-in redirect was cancelled. Please try again.',
-      'auth/redirect-operation-pending': 'A redirect sign-in operation is already in progress. Please wait.'
+      'auth/popup-blocked-by-browser': 'Popup was blocked by the browser. Please allow popups or use a different browser.',
+      'auth/redirect-cancelled-by-user': 'Sign-in redirect was cancelled.',
+      'auth/redirect-operation-pending': 'A redirect sign-in operation is already in progress.',
+      'auth/token-revoked': 'Your session has expired. Please sign in again.',
+      'auth/api-key-not-valid': 'Invalid API key. Please check your Firebase configuration.',
+      'auth/quota-exceeded': 'Too many requests. Please try again later.',
+      'auth/recipient-already-has-a-password': 'This email is already registered. Please sign in instead.',
+      'auth/missing-android-pkg-name': 'Missing Android package name configuration.',
+      'auth/missing-ios-bundle-id': 'Missing iOS bundle ID configuration.'
     };
-    return messages[code] || 'An error occurred. Please try again.';
+    const known = messages[code];
+    if (known) {
+      return known;
+    }
+    // Unknown/unexpected Firebase error — log full details so it can be diagnosed
+    logAuth('Unknown auth error code — NOT in message map', {
+      code: code,
+      message: message,
+      fullError: error
+    });
+    return message
+      ? 'Authentication error: ' + message + ' (code: ' + code + ')'
+      : 'Authentication error (code: ' + code + ')';
   }
 
   function showToast(message) {
@@ -742,7 +808,7 @@
   }
 
   /* -------------------- Public API -------------------- */
-  window.Auth = {
+  window.Auth = Object.assign(window.Auth || {}, {
     getUser: () => auth.currentUser,
     isLoggedIn: () => !!auth.currentUser,
     getUserName: () => auth.currentUser ? (auth.currentUser.displayName || 'User') : null,
@@ -761,5 +827,5 @@
     onFavoritesUpdated: (callback) => {
       document.addEventListener('auth:favoritesUpdated', callback);
     }
-  };
+  });
 })();

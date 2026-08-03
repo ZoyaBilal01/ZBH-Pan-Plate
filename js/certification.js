@@ -1,8 +1,8 @@
 /* ==========================================================================
    ZBH Pan & Plate — Cooking Certification Page Controller
    Handles form validation, image compression + parallel upload (Firebase
-   Storage), submission storage (Firebase RTDB), and admin email
-   notification (Firebase Function with SendGrid or EmailJS fallback).
+   Storage), submission storage (Firebase RTDB), and email notification
+   via EmailJS (primary) with SendGrid Cloud Function fallback.
    ========================================================================== */
 
 (function () {
@@ -14,36 +14,27 @@
   const COMPRESS_QUALITY = 0.85;
   const MAX_RETRIES = 3;
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const SUBMISSION_COOLDOWN_MS = 60000; // 60 seconds between submissions from same IP/UA
-  const DUPLICATE_CHECK_WINDOW_MS = 300000; // 5 minutes
+  const SUBMISSION_COOLDOWN_MS = 60000;
+  const DUPLICATE_CHECK_WINDOW_MS = 300000;
 
   let uploadedFiles = {}; // slotIndex -> file object
   let uploadProgress = {}; // slotIndex -> 0..100
   let uploadErrors = {};
+  let uploadedUrls = {}; // slotIndex -> download URL
   let isSubmitting = false;
 
   function $(sel) { return document.querySelector(sel); }
   function $$(sel) { return document.querySelectorAll(sel); }
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   function formatTime(ms) {
     const d = new Date(ms);
     return d.toLocaleString();
-  }
-
-  function formatFileSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   function generateSubmissionId() {
@@ -85,37 +76,25 @@
 
   function showFieldError(fieldId, message) {
     const el = document.getElementById(fieldId + 'Error');
-    if (el) {
-      el.textContent = message;
-      el.style.display = 'block';
-    }
+    if (el) { el.textContent = message; el.style.display = 'block'; }
   }
 
   function clearFieldError(fieldId) {
     const el = document.getElementById(fieldId + 'Error');
-    if (el) {
-      el.textContent = '';
-      el.style.display = 'none';
-    }
+    if (el) { el.textContent = ''; el.style.display = 'none'; }
   }
 
   function setSlotError(slotIndex, message) {
     const errorEl = $('#certFileError-' + slotIndex);
     const slotEl = $('#certSlot-' + slotIndex);
-    if (errorEl) {
-      errorEl.textContent = message;
-      errorEl.style.display = 'block';
-    }
+    if (errorEl) { errorEl.textContent = message; errorEl.style.display = 'block'; }
     if (slotEl) slotEl.classList.add('invalid');
   }
 
   function clearSlotError(slotIndex) {
     const errorEl = $('#certFileError-' + slotIndex);
     const slotEl = $('#certSlot-' + slotIndex);
-    if (errorEl) {
-      errorEl.textContent = '';
-      errorEl.style.display = 'none';
-    }
+    if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
     if (slotEl) slotEl.classList.remove('invalid');
   }
 
@@ -145,9 +124,7 @@
         callback(blob);
       }, mimeType, COMPRESS_QUALITY);
     };
-    img.onerror = function () {
-      callback(file);
-    };
+    img.onerror = function () { callback(file); };
     img.src = URL.createObjectURL(file);
   }
 
@@ -293,23 +270,12 @@
 
     for (let i = 0; i < MAX_IMAGES; i++) {
       const name = getRecipeName(i);
-      if (!name) {
-        setSlotError(i, 'Please enter a recipe name');
-        hasError = true;
-      }
+      if (!name) { setSlotError(i, 'Please enter a recipe name'); hasError = true; }
     }
 
     for (let i = 0; i < MAX_IMAGES; i++) {
-      if (!uploadedFiles[i]) {
-        setSlotError(i, 'Please upload an image');
-        hasError = true;
-      }
+      if (!uploadedFiles[i]) { setSlotError(i, 'Please upload an image'); hasError = true; }
     }
-
-    ['certFullName', 'certCity', 'certCountry', 'certWhatsApp', 'certEmail'].forEach(function (id) {
-      const el = document.getElementById(id);
-      if (el) el.value = el.value.trim();
-    });
 
     if (hasError) {
       showError('Please fill in all required fields and upload exactly 5 images.');
@@ -344,28 +310,12 @@
     const key = 'zbh_cert_dup_' + btoa(formData.email || '') + '_' + btoa(formData.fullName || '');
     const last = parseInt(localStorage.getItem(key) || '0', 10);
     const now = Date.now();
-    if (now - last < DUPLICATE_CHECK_WINDOW_MS) {
-      return true;
-    }
+    if (now - last < DUPLICATE_CHECK_WINDOW_MS) return true;
     localStorage.setItem(key, String(now));
     return false;
   }
 
   /* -------------------- Upload progress UI -------------------- */
-
-  function setSubmitLoading(isLoading, isUploading) {
-    const btn = $('#certSubmitBtn');
-    if (!btn) return;
-    const btnText = btn.querySelector('.btn-text');
-    const btnLoader = btn.querySelector('.btn-loader');
-    if (btnText) btnText.style.display = (isLoading || isUploading) ? 'none' : 'inline';
-    if (isUploading) {
-      if (btnLoader) btnLoader.style.display = 'none';
-    } else if (btnLoader) {
-      btnLoader.style.display = isLoading ? 'inline-block' : 'none';
-    }
-    btn.disabled = isLoading || isUploading;
-  }
 
   function showUploadProgress() {
     const prog = $('#certUploadProgress');
@@ -376,25 +326,42 @@
   function hideUploadProgress() {
     const prog = $('#certUploadProgress');
     if (prog) prog.classList.remove('show');
+    setSubmitLoading(false, false);
   }
 
-  function setStep(step, text) {
+  function setSubmitLoading(loading, disabled) {
+    const btn = $('#certSubmitBtn');
+    const btnText = $('.btn-text');
+    const btnLoader = $('.btn-loader');
+    if (btn) btn.disabled = disabled;
+    if (loading) {
+      if (btnText) btnText.style.display = 'none';
+      if (btnLoader) btnLoader.style.display = 'inline-block';
+    } else {
+      if (btnText) btnText.style.display = 'inline';
+      if (btnLoader) btnLoader.style.display = 'none';
+    }
+  }
+
+  function setStep(text) {
     const stepEl = $('#certUploadStep');
-    const progressText = $('#certUploadProgress .progress-text');
     if (stepEl) stepEl.textContent = text;
-    if (progressText) progressText.textContent = text;
   }
 
-  function updateProgressBar(percent) {
+  function updateProgressBar(percent, text) {
     const fill = $('#certProgressBar');
+    const label = $('#certProgressText');
     if (fill) fill.style.width = Math.round(percent) + '%';
+    if (label) label.textContent = text || ('Uploading… ' + Math.round(percent) + '%');
   }
 
   function refreshOverallProgress() {
     const values = Object.keys(uploadProgress).map(function (k) { return uploadProgress[k] || 0; });
     const total = values.reduce(function (sum, v) { return sum + v; }, 0);
     const avg = values.length > 0 ? total / values.length : 0;
-    updateProgressBar(avg);
+    const completed = Object.keys(uploadProgress).filter(function (k) { return uploadProgress[k] >= 100; }).length;
+    const current = Math.min(completed + 1, MAX_IMAGES);
+    updateProgressBar(avg, 'Image ' + current + ' of ' + MAX_IMAGES);
   }
 
   /* -------------------- Parallel upload with retry -------------------- */
@@ -403,10 +370,7 @@
     const promises = [];
     for (let i = 0; i < MAX_IMAGES; i++) {
       const file = uploadedFiles[i];
-      if (!file) {
-        promises.push(Promise.resolve(null));
-        continue;
-      }
+      if (!file) { promises.push(Promise.resolve(null)); continue; }
       promises.push(new Promise(function (resolve) {
         compressImage(file, function (compressed) {
           resolve({ slot: i, file: compressed, originalName: file.name });
@@ -434,10 +398,14 @@
               uploadWithRetry(storageRef, file, slotIndex, attempt + 1).then(resolve, reject);
             }, 1000);
           } else {
+            uploadProgress[slotIndex] = 0;
+            delete uploadProgress[slotIndex];
             reject({ slot: slotIndex, error: err });
           }
         },
         function () {
+          uploadProgress[slotIndex] = 100;
+          refreshOverallProgress();
           resolve();
         }
       );
@@ -448,7 +416,7 @@
     const storage = firebase.storage();
     const bucket = storage.ref();
 
-    setStep(1, 'Compressing images...');
+    setStep('Uploading…');
     const compressedList = await compressAllImages();
     compressedList.forEach(function (item) {
       if (item) uploadProgress[item.slot] = 0;
@@ -462,12 +430,14 @@
       const storageRef = bucket.child('certifications/' + fileName);
 
       return uploadWithRetry(storageRef, item.file, item.slot)
-        .then(function () {
-          return { slot: item.slot, path: 'certifications/' + fileName, name: item.originalName };
+        .then(async function () {
+          const url = await storageRef.getDownloadURL();
+          uploadedUrls[item.slot] = url;
+          return { slot: item.slot, path: 'certifications/' + fileName, name: item.originalName, url: url };
         })
         .catch(function (err) {
           uploadErrors[err.slot] = err.error;
-          setSlotError(err.slot, 'Upload failed after retries. Please try again.');
+          setSlotError(err.slot, 'Upload failed after ' + MAX_RETRIES + ' attempts.');
           throw err;
         });
     });
@@ -482,79 +452,69 @@
     return results.filter(function (r) { return r !== null; });
   }
 
-  /* -------------------- Email notification -------------------- */
+  /* -------------------- Email notification via EmailJS -------------------- */
 
-  async function sendNotification(submissionId, formData, imagePaths, recipeNames) {
-    const db = firebase.database();
+  function buildEmailParams(submissionId, formData, recipeNames, imageResults) {
+    const imageLinks = imageResults.map(function (r, idx) {
+      return 'Image ' + (idx + 1) + ' (' + (recipeNames[idx] || 'Recipe ' + (idx + 1)) + '): ' + r.url;
+    }).join('\n');
 
-    let notificationSent = false;
-    let notificationMethod = null;
+     return {
+      to_email: 'zoyabilal01@gmail.com',
+      submission_id: submissionId,
+      applicant_name: formData.fullName,
+      applicant_email: formData.email,
+      whatsapp_number: formData.whatsappNumber,
+      applicant_city: formData.city,
+      applicant_country: formData.country,
+      applicant_age: formData.age ? String(formData.age) : 'Not provided',
+      applicant_notes: formData.notes || '',
+      date_time: formatTime(Date.now()),
+      recipe_names: recipeNames.join(', '),
+      image_links: imageLinks
+    };
+  }
 
-    try {
-      const notifyFn = firebase.functions().httpsCallable('notifyAdminCertification');
-      const result = await notifyFn({
-        submissionId: submissionId,
-        fullName: formData.fullName,
-        email: formData.email,
-        city: formData.city,
-        country: formData.country,
-        whatsappNumber: formData.whatsappNumber,
-        age: formData.age,
-        notes: formData.notes,
-        recipeNames: recipeNames,
-        imagePaths: imagePaths,
-        createdAt: Date.now()
+  async function sendEmailViaEmailJS(submissionId, formData, recipeNames, imageResults) {
+    if (typeof EmailJSConfig === 'undefined') {
+      throw new Error('EmailJS not configured');
+    }
+
+    const params = buildEmailParams(submissionId, formData, recipeNames, imageResults);
+
+    return new Promise(function (resolve, reject) {
+      EmailJSConfig.loadEmailJsSdk(function (err) {
+        if (err) return reject(err);
+        EmailJSConfig.sendEmail(params)
+          .then(function (response) { resolve(response); })
+          .catch(function (error) { reject(error); });
       });
+    });
+  }
 
-      if (result.data && (result.data.success || !result.data.warning)) {
-        notificationSent = true;
-        notificationMethod = 'sendgrid';
-      } else if (result.data && result.data.warning) {
-        notificationMethod = null;
-      }
-    } catch (err) {
-      notificationMethod = null;
-    }
-
-    if (!notificationSent) {
-      if (typeof EmailJSConfig !== 'undefined' && EmailJSConfig) {
-        try {
-          const config = await EmailJSConfig.getConfigViaFunction();
-          if (config && config.configured) {
-            const params = {
-              submission_id: submissionId,
-              applicant_name: formData.fullName,
-              applicant_email: formData.email,
-              whatsapp_number: formData.whatsappNumber,
-              city: formData.city,
-              country: formData.country,
-              age: formData.age ? String(formData.age) : 'Not provided',
-              notes: formData.notes || '',
-              date_time: formatTime(Date.now()),
-              recipe_names: recipeNames.join(', '),
-              image_links: imagePaths.map(function (p, idx) {
-                return 'Image ' + (idx + 1) + ': ' + p;
-              }).join('\n')
-            };
-            await EmailJSConfig.sendViaEmailJs(config, params);
-            notificationSent = true;
-            notificationMethod = 'emailjs';
-          }
-        } catch (emailjsErr) {
-          notificationSent = false;
-        }
-      }
-    }
-
-    return { sent: notificationSent, method: notificationMethod };
+  async function sendEmailViaFunction(submissionId, formData, recipeNames, imagePaths) {
+    const notifyFn = firebase.functions().httpsCallable('notifyAdminCertification');
+    return notifyFn({
+      submissionId: submissionId,
+      fullName: formData.fullName,
+      email: formData.email,
+      city: formData.city,
+      country: formData.country,
+      whatsappNumber: formData.whatsappNumber,
+      age: formData.age,
+      notes: formData.notes,
+      recipeNames: recipeNames,
+      imagePaths: imagePaths,
+      createdAt: Date.now()
+    });
   }
 
   /* -------------------- Success message -------------------- */
 
   const SUCCESS_MESSAGES = {
     one: '✅ Application Submitted Successfully!',
-    two: '👨‍🍳 Your cooking dishes have been received.\n\nThe website owner will now review your cooking proof.',
-    three: '📱 If your application is approved, you will receive a WhatsApp message with the PKR 500 payment details.\n\nAfter payment is confirmed, your official ZBH Pan & Plate Cooking Certificate will be sent to you.'
+    two: '👨‍🍳 Your cooking dishes have been received and are now under review.',
+    three: '📱 If approved, the owner will contact you on WhatsApp with the PKR 500 payment details. After payment is confirmed, your official Cooking Certificate will be sent to you.'
   };
 
   function showSuccess() {
@@ -573,7 +533,6 @@
 
   async function handleSubmit(e) {
     e.preventDefault();
-
     if (isSubmitting) return;
 
     const cooldownSeconds = checkSubmissionCooldown();
@@ -592,21 +551,22 @@
 
     isSubmitting = true;
     showUploadProgress();
+    setStep('Uploading…');
+    updateProgressBar(0, 'Image 1 of ' + MAX_IMAGES);
     Object.keys(uploadProgress).forEach(function (k) { delete uploadProgress[k]; });
     Object.keys(uploadErrors).forEach(function (k) { delete uploadErrors[k]; });
+    Object.keys(uploadedUrls).forEach(function (k) { delete uploadedUrls[k]; });
 
     const submissionId = generateSubmissionId();
     const recipeNames = [];
     for (let i = 0; i < MAX_IMAGES; i++) recipeNames.push(getRecipeName(i));
 
     try {
-      setStep(1, 'Uploading image 1 of 5...');
-      updateProgressBar(0);
       const uploadResults = await uploadAllImages(submissionId);
       const imagePaths = uploadResults.map(function (r) { return r.path; });
 
-      setStep(2, 'Preparing Email...');
-      updateProgressBar(50);
+      setStep('Preparing Email…');
+      updateProgressBar(55, 'Preparing Email…');
 
       const timestamp = firebase.database.ServerValue.TIMESTAMP;
       const submissionData = {
@@ -628,26 +588,47 @@
 
       await firebase.database().ref('certifications/' + submissionId).set(submissionData);
 
-      setStep(3, 'Sending Email...');
-      updateProgressBar(70);
+      setStep('Sending Email…');
+      updateProgressBar(70, 'Sending Email…');
 
-      const notification = await sendNotification(submissionId, formData, imagePaths, recipeNames);
+      let emailSent = false;
+      try {
+        await sendEmailViaEmailJS(submissionId, formData, recipeNames, uploadResults);
+        emailSent = true;
+      } catch (emailjsErr) {
+        console.warn('EmailJS failed, falling back to SendGrid:', emailjsErr);
+        try {
+          await sendEmailViaFunction(submissionId, formData, recipeNames, imagePaths);
+          emailSent = true;
+        } catch (funcErr) {
+          console.warn('SendGrid fallback also failed:', funcErr);
+        }
+      }
 
-      updateProgressBar(100);
+      updateProgressBar(100, 'Completed Successfully');
+      setStep('Completed Successfully');
 
-      setTimeout(function () {
+      if (emailSent) {
+        setTimeout(function () {
+          hideUploadProgress();
+          setStep('');
+          showSuccess();
+        }, 500);
+      } else {
         hideUploadProgress();
-        setSubmitLoading(false, false);
-        showSuccess();
-      }, 300);
+        setStep('');
+        showError('Your application was received, but the notification email could not be sent. Please try again later.');
+        $('#certificationForm').style.display = 'none';
+        isSubmitting = false;
+      }
 
     } catch (err) {
       hideUploadProgress();
-      setSubmitLoading(false, false);
+      setStep('');
 
       if (err && err.type === 'upload') {
         showError('One or more images failed to upload.');
-      } else if (err && err.message && err.message.indexOf('network') !== -1) {
+      } else if (err && err.message && (err.message.indexOf('network') !== -1 || err.message.indexOf('Network') !== -1)) {
         showError('Connection lost. Please try again.');
       } else {
         showError('Something went wrong during submission. Please try again.');
@@ -665,7 +646,6 @@
 
     initUploadSlots();
 
-    // Network status monitoring
     window.addEventListener('offline', function () {
       showError('Connection lost. Please try again.');
     });
