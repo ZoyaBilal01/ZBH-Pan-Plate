@@ -311,7 +311,7 @@
             if (t.length < 3) continue;
             let tokenHit = false;
             for (const u of userSet) {
-              if (u.includes(t) || t.includes(u)) { tokenHit = true; break; }
+              if (t.includes(u)) { tokenHit = true; break; }
             }
             if (tokenHit) { matchedToken = true; break; }
           }
