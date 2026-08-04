@@ -1,7 +1,7 @@
 /* Japanese recipes */
 addRecipe({ name: "Chicken Teriyaki", cuisine: "Japanese", category: "Main Course",
   description: "Glazed chicken in a sweet soy-mirin sauce.",
-  ingredients: ["Chicken","Soy Sauce","Mirin","Sugar","Ginger","Oil","Spring Onion"],
+  ingredients: ["600g Chicken Thigh", "1/2 cup Soy Sauce", "1/4 cup Mirin", "2 tbsp Sugar", "1 inch Ginger", "1 tbsp Oil", "2 stalks Spring Onion"],
   prep: "10 min", cook: "20 min", servings: 3, calories: 460, difficulty: "Easy",
   steps: ["Sear the chicken.","Add soy, mirin and sugar.","Glaze until sticky.","Slice and garnish."],
   tips: ["Reduce the sauce until it coats the back of a spoon."],
