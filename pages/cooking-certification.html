@@ -12,239 +12,8 @@
 
   <main class="main-content">
     <section class="page page-certification active" id="page-certification">
-      <!-- Hero Section -->
-      <section class="cert-hero">
-        <div class="cert-hero-content">
-          <h1 class="cert-hero-title">🏆 ZBH Pan & Plate Cooking Certification</h1>
-          <p class="cert-hero-subtitle">Cook, Learn, Submit Your Work & Earn Your Official Cooking Certificate.</p>
-          <div class="cert-fee-badge">Certification Fee: PKR 500</div>
-        </div>
-      </section>
-
-      <div class="container">
-        <!-- About Section -->
-        <section class="cert-about">
-          <h2>About the Certification</h2>
-          <p>Prove your cooking skills and earn an official digital certificate from ZBH Pan & Plate. Simply complete any 5 recipes from our website, prepare the dishes yourself, and upload proof photos for verification.</p>
-
-          <div class="cert-requirements">
-            <div class="cert-step">
-              <div class="cert-step-number">1</div>
-              <div class="cert-step-title">Complete 5 Recipes</div>
-              <div class="cert-step-desc">Cook any 5 recipes from ZBH Pan & Plate</div>
-            </div>
-            <div class="cert-step">
-              <div class="cert-step-number">2</div>
-              <div class="cert-step-title">Upload Photos</div>
-              <div class="cert-step-desc">Share proof photos of each dish you prepare</div>
-            </div>
-            <div class="cert-step">
-              <div class="cert-step-number">3</div>
-              <div class="cert-step-title">Get Verified</div>
-              <div class="cert-step-desc">Our team reviews and verifies your submissions</div>
-            </div>
-            <div class="cert-step">
-              <div class="cert-step-number">4</div>
-              <div class="cert-step-title">Earn Certificate</div>
-              <div class="cert-step-desc">Receive your official digital cooking certificate</div>
-            </div>
-          </div>
-
-          <div class="cert-fee-block">
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">Certification Fee</div>
-            <div class="cert-fee-amount">PKR 500</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Payment details provided after approval</div>
-          </div>
-
-          <div class="cert-notice">
-            <strong>Note:</strong> Certificates are issued only after successful manual verification of all submitted recipe photos.
-          </div>
-        </section>
-
-        <!-- Registration & Upload Form -->
-        <section class="cert-form-container">
-          <h2>Submit Your Certification Request</h2>
-          <p>Fill out your details and upload photos of your 5 completed dishes. After submission, our team will review your work and notify you via email.</p>
-
-          <form id="certificationForm" novalidate>
-            <!-- Registration Form -->
-            <div class="cert-form-section">
-              <h3>Registration Details</h3>
-              <div class="cert-form-grid">
-                <div class="form-group">
-                  <label for="certFullName">Full Name *</label>
-                  <input type="text" id="certFullName" name="fullName" required placeholder="Enter your full name">
-                  <span class="field-error" id="certFullNameError"></span>
-                </div>
-                <div class="form-group">
-                  <label for="certCity">City *</label>
-                  <input type="text" id="certCity" name="city" required placeholder="Enter your city">
-                  <span class="field-error" id="certCityError"></span>
-                </div>
-                <div class="form-group">
-                  <label for="certCountry">Country *</label>
-                  <input type="text" id="certCountry" name="country" required placeholder="Enter your country">
-                  <span class="field-error" id="certCountryError"></span>
-                </div>
-                <div class="form-group">
-                  <label for="certWhatsApp">WhatsApp Number *</label>
-                  <input type="tel" id="certWhatsApp" name="whatsappNumber" required placeholder="+92 300 1234567">
-                  <span class="field-error" id="certWhatsAppError"></span>
-                </div>
-                <div class="form-group">
-                  <label for="certEmail">Email Address *</label>
-                  <input type="email" id="certEmail" name="email" required placeholder="your@email.com">
-                  <span class="field-error" id="certEmailError"></span>
-                </div>
-                <div class="form-group">
-                  <label for="certAge">Age (Optional)</label>
-                  <input type="number" id="certAge" name="age" min="1" max="120" placeholder="Enter your age">
-                  <span class="field-error" id="certAgeError"></span>
-                </div>
-                <div class="form-group">
-                  <label for="certNotes">Notes (Optional)</label>
-                  <textarea id="certNotes" name="notes" rows="3" placeholder="Any additional information..."></textarea>
-                  <span class="field-error" id="certNotesError"></span>
-                </div>
-              </div>
-
-              <!-- Honeypot field for spam prevention -->
-              <input type="text" id="certWebsite" name="website" autocomplete="off" style="display:none !important;">
-              <input type="hidden" name="formTimestamp" value="">
-            </div>
-
-            <!-- Upload Section -->
-            <div class="cert-form-section">
-              <h3>Upload Photos (5 required)</h3>
-              <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px;">Upload a photo of each dish you prepared. Accepted formats: JPG, JPEG, PNG (max 5MB each).</p>
-
-              <div id="certUploadSlots">
-                <!-- Slot 1 -->
-                <div class="cert-upload-slot" id="certSlot-0">
-                  <div class="cert-slot-header">
-                    <span class="cert-slot-label">Recipe 1<div class="required-asterisk">*</div></span>
-                  </div>
-                  <div class="cert-slot-input">
-                    <input type="text" class="cert-recipe-name" data-slot="0" placeholder="Recipe name" required>
-                    <label class="cert-upload-area" for="certFile-0">
-                      <div class="upload-icon">📷</div>
-                      <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
-                    </label>
-                    <input type="file" id="certFile-0" class="cert-file-input" data-slot="0" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
-                    <div class="cert-upload-error" id="certFileError-0"></div>
-                    <div class="cert-preview-wrapper" id="certPreview-0"></div>
-                  </div>
-                </div>
-
-                <!-- Slot 2 -->
-                <div class="cert-upload-slot" id="certSlot-1">
-                  <div class="cert-slot-header">
-                    <span class="cert-slot-label">Recipe 2<div class="required-asterisk">*</div></span>
-                  </div>
-                  <div class="cert-slot-input">
-                    <input type="text" class="cert-recipe-name" data-slot="1" placeholder="Recipe name" required>
-                    <label class="cert-upload-area" for="certFile-1">
-                      <div class="upload-icon">📷</div>
-                      <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
-                    </label>
-                    <input type="file" id="certFile-1" class="cert-file-input" data-slot="1" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
-                    <div class="cert-upload-error" id="certFileError-1"></div>
-                    <div class="cert-preview-wrapper" id="certPreview-1"></div>
-                  </div>
-                </div>
-
-                <!-- Slot 3 -->
-                <div class="cert-upload-slot" id="certSlot-2">
-                  <div class="cert-slot-header">
-                    <span class="cert-slot-label">Recipe 3<div class="required-asterisk">*</div></span>
-                  </div>
-                  <div class="cert-slot-input">
-                    <input type="text" class="cert-recipe-name" data-slot="2" placeholder="Recipe name" required>
-                    <label class="cert-upload-area" for="certFile-2">
-                      <div class="upload-icon">📷</div>
-                      <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
-                    </label>
-                    <input type="file" id="certFile-2" class="cert-file-input" data-slot="2" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
-                    <div class="cert-upload-error" id="certFileError-2"></div>
-                    <div class="cert-preview-wrapper" id="certPreview-2"></div>
-                  </div>
-                </div>
-
-                <!-- Slot 4 -->
-                <div class="cert-upload-slot" id="certSlot-3">
-                  <div class="cert-slot-header">
-                    <span class="cert-slot-label">Recipe 4<div class="required-asterisk">*</div></span>
-                  </div>
-                  <div class="cert-slot-input">
-                    <input type="text" class="cert-recipe-name" data-slot="3" placeholder="Recipe name" required>
-                    <label class="cert-upload-area" for="certFile-3">
-                      <div class="upload-icon">📷</div>
-                      <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
-                    </label>
-                    <input type="file" id="certFile-3" class="cert-file-input" data-slot="3" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
-                    <div class="cert-upload-error" id="certFileError-3"></div>
-                    <div class="cert-preview-wrapper" id="certPreview-3"></div>
-                  </div>
-                </div>
-
-                <!-- Slot 5 -->
-                <div class="cert-upload-slot" id="certSlot-4">
-                  <div class="cert-slot-header">
-                    <span class="cert-slot-label">Recipe 5<div class="required-asterisk">*</div></span>
-                  </div>
-                  <div class="cert-slot-input">
-                    <input type="text" class="cert-recipe-name" data-slot="4" placeholder="Recipe name" required>
-                    <label class="cert-upload-area" for="certFile-4">
-                      <div class="upload-icon">📷</div>
-                      <div class="upload-text">Click to upload photo</div>
-                      <div class="upload-hint">JPG, JPEG, PNG, WEBP • Max 5MB</div>
-                    </label>
-                    <input type="file" id="certFile-4" class="cert-file-input" data-slot="4" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
-                    <div class="cert-upload-error" id="certFileError-4"></div>
-                    <div class="cert-preview-wrapper" id="certPreview-4"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Upload Progress -->
-            <div class="cert-upload-progress" id="certUploadProgress">
-              <div class="progress-step" id="certUploadStep">Preparing...</div>
-              <div class="progress-bar-container">
-                <div class="progress-bar-fill" id="certProgressBar"></div>
-              </div>
-              <div class="progress-text" id="certProgressText">Uploading… 0%</div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="cert-form-actions">
-              <button type="submit" class="btn btn-primary cert-submit-btn" id="certSubmitBtn">
-                <span class="btn-text">Submit Certification Request</span>
-                <span class="btn-loader" style="display:none;"></span>
-              </button>
-            </div>
-
-              <!-- Privacy Notice -->
-            <div class="cert-privacy-note">
-              <strong>Privacy Notice:</strong> Your personal information (name, email, WhatsApp number, city, country) and uploaded photos are used only for certification verification. They will not be displayed publicly or shared with third parties. All submissions are stored securely and are accessible only to the website administrator for review purposes.
-            </div>
-          </form>
-
-          <!-- Error Message (outside form so visible when form is hidden) -->
-          <div class="cert-error-message" id="certFormError"></div>
-
-          <!-- Success Message (outside form so visible when form is hidden) -->
-          <div class="cert-success" id="certSuccess">
-            <div class="cert-success-icon">✅</div>
-            <h3 class="cert-success-title" id="certSuccessOne">✅ Application Submitted Successfully!</h3>
-            <div class="cert-success-body" id="certSuccessTwo">👨‍🍳 Your cooking dishes have been received.<br>The website owner will now review your cooking proof.</div>
-            <div class="cert-success-body" id="certSuccessThree">📱 If your application is approved, you will receive a WhatsApp message with the PKR 500 payment details.<br>After payment is confirmed, your official ZBH Pan & Plate Cooking Certificate will be sent to you.</div>
-          </div>
-        </section>
+      <div style="max-width: 900px; margin: 40px auto; padding: 0 15px;">
+        <iframe src="https://form.jotform.com/262147734202047" frameborder="0" scrolling="auto" id="jotformIframe" style="width: 100%; min-height: 600px; border: none; display: block;" onload="window.parent.scrollTo(0,0)"></iframe>
       </div>
     </section>
   </main>
@@ -252,32 +21,21 @@
   <div id="footer-placeholder"></div>
   <div id="modals-placeholder"></div>
 
-  <!-- Firebase CDN -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
-
-  <!-- Firebase Configuration -->
-  <script src="../js/firebase-config.js"></script>
-
-  <!-- Shared Components -->
   <script src="../js/auth.js"></script>
   <script src="../js/common.js"></script>
-
-  <!-- Main Controller -->
   <script src="../js/main.js"></script>
 
-   <!-- Certification Page Logic -->
-  <script src="../js/certification.js"></script>
+  <script>
+    (function() {
+      var iframe = document.getElementById('jotformIframe');
+      if (!iframe) return;
 
-  <!-- EmailJS SDK (preloaded for immediate email sending on form submit) -->
-  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@4/dist/emailjs.min.js"></script>
-
-  <!-- EmailJS Integration -->
-  <script src="../js/emailjs-config.js"></script>
+      window.addEventListener('message', function(event) {
+        if (event.origin.indexOf('jotform.com') !== -1 && event.data && typeof event.data === 'object' && event.data.height) {
+          iframe.style.height = event.data.height + 'px';
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
