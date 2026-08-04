@@ -250,7 +250,7 @@
     const MIN_FRIDGE = 2;
 
     function normalizeIngredient(str) {
-      return (str || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+      return (str || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
     }
 
     function fridgeRenderTags() {
@@ -266,7 +266,6 @@
         remove.addEventListener('click', () => {
           fridgeIngredients.splice(idx, 1);
           fridgeRenderTags();
-          renderFridgeResults();
         });
         tag.appendChild(remove);
         fridgeTags.appendChild(tag);
@@ -288,31 +287,42 @@
       }
       fridgeIngredients.push(val);
       fridgeRenderTags();
-      renderFridgeResults();
       fridgeInput.value = '';
     }
 
     function fridgeMatchResult(recipe) {
       const ingredients = recipe.ingredients || [];
       const userSet = new Set(fridgeIngredients.map(normalizeIngredient).filter(Boolean));
+      let matched = 0;
+      let score = 0;
       const missing = [];
 
-      for (const ing of ingredients) {
+      ingredients.forEach(ing => {
         const normIng = normalizeIngredient(ing);
-        if (!normIng) continue;
-        let found = false;
-        for (const u of userSet) {
-          if (normIng.includes(u) || u.includes(normIng)) {
-            found = true;
-            break;
+        if (!normIng) return;
+        let matchedExact = false;
+        let matchedToken = false;
+
+        if (userSet.has(normIng)) {
+          matchedExact = true;
+        } else {
+          const riTokens = normIng.split(/\s+/);
+          for (const t of riTokens) {
+            if (t.length < 3) continue;
+            let tokenHit = false;
+            for (const u of userSet) {
+              if (u.includes(t) || t.includes(u)) { tokenHit = true; break; }
+            }
+            if (tokenHit) { matchedToken = true; break; }
           }
         }
-        if (!found) {
-          missing.push(ing);
-        }
-      }
 
-      return { matched: ingredients.length - missing.length, missing, score: missing.length === 0 ? 1 : 0 };
+        if (matchedExact) { matched++; score += 1; }
+        else if (matchedToken) { matched++; score += 0.5; }
+        else { missing.push(ing); }
+      });
+
+      return { score, matched, missing };
     }
 
     function buildFridgeCard(recipe, missing) {
@@ -377,15 +387,28 @@
       const results = all.map(r => {
         const res = fridgeMatchResult(r);
         return { recipe: r, score: res.score, matched: res.matched, missing: res.missing };
-      }).filter(x => x.missing.length === 0);
+      }).filter(x => x.score > 0);
 
-      results.sort((a, b) => b.matched - a.matched || b.score - a.score);
+      const exact = results.filter(x => x.missing.length === 0);
+      const partial = results.filter(x => x.missing.length > 0);
+
+      exact.sort((a, b) => b.matched - a.matched || b.score - a.score);
+      partial.sort((a, b) => a.missing.length - b.missing.length || b.matched - a.matched || b.score - a.score);
 
       fridgeEmpty.style.display = 'none';
 
-      if (results.length) {
-        fridgeRecipeGrid.appendChild(createFridgeSection('✅ You Can Make These Now', results, false));
-      } else {
+      let anySection = false;
+
+      if (exact.length) {
+        fridgeRecipeGrid.appendChild(createFridgeSection('✅ You Can Make These Now', exact, false));
+        anySection = true;
+      }
+      if (partial.length) {
+        fridgeRecipeGrid.appendChild(createFridgeSection('🛒 You Need These Extra Ingredients', partial, true));
+        anySection = true;
+      }
+
+      if (!anySection) {
         fridgeEmpty.style.display = 'block';
       }
     }
