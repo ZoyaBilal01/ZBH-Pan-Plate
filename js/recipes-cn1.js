@@ -1,7 +1,7 @@
 /* Chinese recipes — batch 1 */
 addRecipe({ name: "Chicken Chow Mein", cuisine: "Chinese", category: "Noodles",
   description: "Stir-fried noodles with chicken and crunchy vegetables in savoury sauce.",
-  ingredients: ["Pasta", "Chicken", "Cabbage", "Carrot", "Bell Pepper", "Spring Onion", "Soy Sauce", "Garlic", "Salt", "Olive Oil"],
+   ingredients: ["400g Noodles", "500g Chicken", "1/4 head Cabbage", "1 Carrot", "1 Bell Pepper", "3 stalks Spring Onion", "2 tbsp Soy Sauce", "4 cloves Garlic", "1 tsp Salt", "2 tbsp Olive Oil"],
   prep: "20 min", cook: "20 min", servings: 4, calories: 480, difficulty: "Easy",
   steps: ["Boil noodles and toss with a little oil.", "Stir-fry chicken until cooked.", "Add vegetables and stir-fry on high heat.", "Add noodles and sauces and toss to combine."],
   tips: ["Keep the heat high for a smoky wok flavour."],
@@ -9,7 +9,7 @@ addRecipe({ name: "Chicken Chow Mein", cuisine: "Chinese", category: "Noodles",
 
 addRecipe({ name: "Hakka Noodles", cuisine: "Chinese", category: "Noodles",
   description: "Indo-Chinese stir-fried noodles loaded with vegetables and sauces.",
-  ingredients: ["Pasta", "Cabbage", "Carrot", "Bell Pepper", "Spring Onion", "Soy Sauce", "Vinegar", "Chili Sauce", "Garlic", "Salt"],
+   ingredients: ["400g Noodles", "1/4 head Cabbage", "1 Carrot", "1 Bell Pepper", "3 stalks Spring Onion", "2 tbsp Soy Sauce", "1 tbsp Vinegar", "1 tbsp Chili Sauce", "4 cloves Garlic", "1/2 tsp Salt"],
   prep: "15 min", cook: "15 min", servings: 4, calories: 420, difficulty: "Easy",
   steps: ["Boil noodles until just done and drain.", "Stir-fry garlic and vegetables on high heat.", "Add sauces and toss.", "Add noodles and combine quickly."],
   tips: ["Do not overcook the noodles; keep them firm."],

@@ -104,39 +104,26 @@ const SharedComponents = (function () {
     });
   }
 
-  function initModalClose() {
-    const modalClose = document.getElementById('modalClose');
-    const recipeModal = document.getElementById('recipeModal');
-    const authModalClose = document.getElementById('authModalClose');
-    const authModal = document.getElementById('authModal');
+   function initModalClose() {
+     const modalClose = document.getElementById('modalClose');
+     const recipeModal = document.getElementById('recipeModal');
 
-    if (modalClose && recipeModal) {
-      modalClose.addEventListener('click', () => {
-        recipeModal.classList.remove('open');
-        document.body.style.overflow = '';
-      });
-    }
+     if (modalClose && recipeModal) {
+       modalClose.addEventListener('click', () => {
+         recipeModal.classList.remove('open');
+         document.body.style.overflow = '';
+       });
+     }
 
-    if (authModalClose && authModal) {
-      authModalClose.addEventListener('click', () => {
-        authModal.classList.remove('open');
-        document.body.style.overflow = '';
-      });
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        if (recipeModal && recipeModal.classList.contains('open')) {
-          recipeModal.classList.remove('open');
-          document.body.style.overflow = '';
-        }
-        if (authModal && authModal.classList.contains('open')) {
-          authModal.classList.remove('open');
-          document.body.style.overflow = '';
-        }
-      }
-    });
-  }
+     document.addEventListener('keydown', (e) => {
+       if (e.key === 'Escape') {
+         if (recipeModal && recipeModal.classList.contains('open')) {
+           recipeModal.classList.remove('open');
+           document.body.style.overflow = '';
+         }
+       }
+     });
+   }
 
   function showToast(message) {
     const toastContainer = document.getElementById('toastContainer');

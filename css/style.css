@@ -136,26 +136,7 @@ body {
   gap: 8px;
 }
 
-.theme-toggle {
-  width: 42px;
-  height: 42px;
-  border: none;
-  background: var(--surface-alt);
-  border-radius: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  transition: all var(--transition);
-}
-
-.theme-toggle:hover {
-  background: var(--border);
-  transform: scale(1.05);
-}
-
-.mobile-menu-btn {
+ .mobile-menu-btn {
   display: none;
   flex-direction: column;
   gap: 5px;

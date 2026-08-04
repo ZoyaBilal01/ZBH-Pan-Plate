@@ -44,7 +44,7 @@ syncCheck('.firebaserc is valid JSON', () => assert(jsonOk('.firebaserc')));
 syncCheck('functions/package.json is valid JSON', () => assert(jsonOk('functions/package.json')));
 
 // ---- 2. Syntax check (new Function parses but does not execute) ----
-const jsFiles = ['js/auth.js', 'js/main.js', 'js/common.js', 'js/firebase-config.js', 'js/admin.js', 'js/script.js', 'js/data.js', 'js/recipes.js', 'js/recipeImages.js', 'js/certification.js', 'js/certification-admin.js', 'js/emailjs-config.js', 'functions/index.js'];
+const jsFiles = ['js/main.js', 'js/common.js', 'js/firebase-config.js', 'js/admin.js', 'js/data.js', 'js/recipes.js', 'js/recipeImages.js', 'js/certification.js', 'js/certification-admin.js', 'js/emailjs-config.js', 'functions/index.js'];
 for (const f of jsFiles) {
   if (!exists(f)) continue;
   syncCheck(f + ' parses without syntax errors', () => { try { new Function(read(f)); } catch (e) { throw e; } });
@@ -124,7 +124,7 @@ syncCheck('functions/index.js exports listUsersAdmin (admin panel callable)', ()
 // ---- 6. No secrets in client JS ----
 syncCheck('no SendGrid/Gmail SMTP secrets in client js/', () => {
   let found = false;
-  const files = ['js/auth.js', 'js/firebase-config.js', 'js/main.js', 'js/common.js', 'js/admin.js', 'js/script.js'];
+  const files = ['js/auth.js', 'js/firebase-config.js', 'js/main.js', 'js/common.js', 'js/admin.js'];
   for (const f of files) { if (exists(f) && /SG\.[A-Za-z0-9_.-]{16,}|sendgrid|smtp\.gmail|nodemailer|app_password/i.test(read(f))) found = true; }
   assert(!found, 'client JS must not contain email-service secrets');
 });
@@ -137,7 +137,7 @@ syncCheck('database rules restrict user writes to authenticated owner', () => {
 });
 
 // ---- 8. HTML asset references all exist ----
-const HTML_FILES = ['index.html', 'pages/index.html', 'pages/login.html', 'pages/signup.html', 'pages/admin.html', 'pages/browse.html', 'pages/favorites.html', 'pages/fridge.html', 'pages/diet-plans.html', 'pages/about.html', 'pages/contact.html', 'pages/cooking-certification.html', 'pages/certification-admin.html'];
+const HTML_FILES = ['index.html', 'pages/index.html', 'pages/admin.html', 'pages/favorites.html', 'pages/fridge.html', 'pages/diet-plans.html', 'pages/about.html', 'pages/contact.html', 'pages/cooking-certification.html', 'pages/certification-admin.html'];
 let totalRefs = 0;
 for (const p of HTML_FILES) {
   if (!exists(p)) continue;
@@ -169,7 +169,7 @@ function runHttpTests(done) {
   });
   server.listen(0, '127.0.0.1', () => {
     const port = server.address().port;
-    const urls = ['/', '/js/auth.js', '/js/main.js', '/js/firebase-config.js', '/js/common.js', '/js/certification.js', '/js/certification-admin.js', '/js/emailjs-config.js', '/css/style.css', '/pages/login.html', '/pages/signup.html', '/pages/cooking-certification.html', '/pages/certification-admin.html'];
+    const urls = ['/', '/js/main.js', '/js/firebase-config.js', '/js/common.js', '/js/certification.js', '/js/certification-admin.js', '/js/emailjs-config.js', '/css/style.css', '/pages/admin.html', '/pages/cooking-certification.html', '/pages/certification-admin.html'];
     let pending = urls.length;
     const finish = () => { if (--pending === 0) { server.close(); done(); } };
     urls.forEach((u) => {

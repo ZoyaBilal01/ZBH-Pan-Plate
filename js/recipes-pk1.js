@@ -1,7 +1,7 @@
 /* Pakistani recipes — batch 1 (rice, pulao, stews) */
 addRecipe({ name: "Chicken Biryani", cuisine: "Pakistani", category: "Rice",
   description: "Fragrant layered basmati rice cooked with spiced chicken, caramelised onions and saffron.",
-  ingredients: ["Basmati Rice", "Chicken", "Onion", "Tomato", "Yogurt", "Garlic", "Ginger", "Garam Masala", "Red Chili Powder", "Turmeric", "Salt", "Ghee", "Mint", "Coriander"],
+   ingredients: ["2 cups Basmati Rice", "1 kg Chicken", "2 large Onions", "2 Tomatoes", "1 cup Yogurt", "8 cloves Garlic", "1 inch Ginger", "2 tsp Garam Masala", "1 tsp Red Chili Powder", "1/2 tsp Turmeric", "1 tsp Salt", "3 tbsp Ghee", "1/4 cup Mint", "1/4 cup Coriander"],
   prep: "30 min", cook: "50 min", servings: 5, calories: 640, difficulty: "Medium",
   steps: ["Marinate chicken in yogurt, ginger-garlic and spices for 30 minutes.", "Fry onions until golden and set half aside for layering.", "Cook the marinated chicken in the onion masala until oil separates.", "Boil basmati rice with whole spices until 70% done, then drain.", "Layer rice and chicken masala, top with saffron milk, fried onions and herbs.", "Cover and steam on low heat (dum) for 20 minutes."],
   tips: ["Soak rice for 30 minutes for longer grains.", "Do not fully cook the rice before layering."],
@@ -25,7 +25,7 @@ addRecipe({ name: "Mutton Biryani", cuisine: "Pakistani", category: "Rice",
 
 addRecipe({ name: "Chicken Pulao", cuisine: "Pakistani", category: "Rice",
   description: "Lightly spiced one-pot rice cooked in flavourful chicken stock.",
-  ingredients: ["Basmati Rice", "Chicken", "Onion", "Garlic", "Ginger", "Cumin", "Black Pepper", "Cloves", "Cinnamon", "Salt"],
+   ingredients: ["2 cups Basmati Rice", "1 kg Chicken", "2 large Onions", "8 cloves Garlic", "1 inch Ginger", "1 tsp Cumin", "1 tsp Black Pepper", "4 Cloves", "1 stick Cinnamon", "1 tsp Salt"],
   prep: "20 min", cook: "40 min", servings: 4, calories: 560, difficulty: "Easy",
   steps: ["Fry onions golden, add chicken and whole spices.", "Add water to make stock and cook chicken.", "Add soaked rice to the stock.", "Cook until water evaporates, then steam on low heat."],
   tips: ["Measure stock precisely: 1.5 cups liquid per cup of rice."],

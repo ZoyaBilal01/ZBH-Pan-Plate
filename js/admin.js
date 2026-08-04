@@ -202,9 +202,9 @@
       );
       const lb = $('adminLoginBtn');
       if (lb) {
-        lb.addEventListener('click', function () {
-          if (typeof Auth !== 'undefined' && Auth && Auth.openLogin) Auth.openLogin();
-        });
+         lb.addEventListener('click', function () {
+           alert('Authentication is no longer available.');
+         });
       }
       return;
     }
