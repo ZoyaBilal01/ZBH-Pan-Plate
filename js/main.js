@@ -9,7 +9,6 @@
   /* -------------------- Page Detection -------------------- */
   function getCurrentPage() {
     const path = window.location.pathname;
-    if (path.includes('/pages/browse.html')) return 'browse';
     if (path.includes('/pages/favorites.html')) return 'favorites';
     if (path.includes('/pages/fridge.html')) return 'fridge';
     if (path.includes('/pages/diet-plans.html')) return 'diet-plans';
@@ -17,10 +16,8 @@
     if (path.includes('/pages/certification-admin.html')) return 'certification-admin';
     if (path.includes('/pages/about.html')) return 'about';
     if (path.includes('/pages/contact.html')) return 'contact';
-     if (path.includes('/pages/login.html')) return 'login';
-     if (path.includes('/pages/signup.html')) return 'signup';
      if (path.includes('/pages/admin.html')) return 'admin';
-     if (path.includes('/pages/recipe.html')) return 'recipe';
+      if (path.includes('/pages/recipe.html')) return 'recipe';
     return 'home';
   }
 
@@ -45,9 +42,6 @@
       case 'home':
         initHome();
         break;
-      case 'browse':
-        initBrowse();
-        break;
       case 'favorites':
         initFavorites();
         break;
@@ -59,12 +53,6 @@
         break;
       case 'contact':
         initContact();
-        break;
-      case 'login':
-        initAuthPage('login');
-        break;
-      case 'signup':
-        initAuthPage('signup');
         break;
       case 'admin':
         break;
@@ -220,52 +208,6 @@
     currentPageRender = homeRenderFn;
   }
 
-  /* -------------------- Browse Page -------------------- */
-  function initBrowse() {
-    const browseSearch = $('#browseSearch');
-    const browseSearchBtn = $('#browseSearchBtn');
-    const browseCuisine = $('#browseCuisine');
-    const browseCategory = $('#browseCategory');
-    const browseDifficulty = $('#browseDifficulty');
-    const browseSort = $('#browseSort');
-    const browseRecipeGrid = $('#browseRecipeGrid');
-    const browseEmpty = $('#browseEmpty');
-    const browseStats = $('#browseStats');
-
-    function renderBrowse() {
-      const query = browseSearch.value;
-      const cuisine = browseCuisine.value;
-      const category = browseCategory.value;
-      const difficulty = browseDifficulty.value;
-      const sort = browseSort.value;
-      const recipes = normalizeRecipes(SharedComponents.getRecipes());
-      let filtered = filterRecipes(recipes, query, cuisine, category, difficulty);
-      filtered = sortRecipes(filtered, sort);
-
-      browseRecipeGrid.innerHTML = '';
-      if (filtered.length === 0) {
-        browseEmpty.style.display = 'block';
-        browseStats.textContent = '';
-      } else {
-        browseEmpty.style.display = 'none';
-        browseStats.textContent = `Showing ${filtered.length} recipe${filtered.length !== 1 ? 's' : ''}`;
-        filtered.forEach(r => browseRecipeGrid.appendChild(SharedComponents.createRecipeCard(r)));
-      }
-    }
-
-    browseSearchBtn.addEventListener('click', renderBrowse);
-    browseSearch.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') renderBrowse();
-    });
-    browseCuisine.addEventListener('change', renderBrowse);
-    browseCategory.addEventListener('change', renderBrowse);
-    browseDifficulty.addEventListener('change', renderBrowse);
-    browseSort.addEventListener('change', renderBrowse);
-
-    renderBrowse();
-    currentPageRender = renderBrowse;
-  }
-
   /* -------------------- Favorites Page -------------------- */
   function initFavorites() {
     const favoritesGrid = $('#favoritesGrid');
@@ -286,10 +228,6 @@
         favRecipes.forEach(r => favoritesGrid.appendChild(SharedComponents.createRecipeCard(r)));
       }
     }
-
-    goBrowseBtn.addEventListener('click', () => {
-      window.location.href = '../pages/browse.html';
-    });
 
     renderFavorites();
     currentPageRender = renderFavorites;
@@ -586,20 +524,6 @@
         SharedComponents.showToast('Recipe not found: ' + recipeName);
       }
     });
-  }
-
-  /* -------------------- Auth Pages -------------------- */
-  function initAuthPage(type) {
-    if (typeof Auth !== 'undefined' && Auth && Auth.isLoggedIn()) {
-      window.location.href = '../index.html';
-      return;
-    }
-    const placeholder = document.querySelector('.auth-placeholder');
-    if (placeholder) placeholder.style.display = 'none';
-    if (typeof Auth !== 'undefined' && Auth) {
-      if (type === 'login') Auth.openLogin();
-      if (type === 'signup') Auth.openSignup();
-    }
   }
 
   /* -------------------- Search & Filter Helpers -------------------- */

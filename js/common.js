@@ -10,19 +10,18 @@ const SharedComponents = (function () {
     const isRoot = !window.location.pathname.includes('/pages/');
     const prefix = isRoot ? '' : '../';
     const pages = [
-      { id: 'home', label: 'Home', href: isRoot ? 'index.html' : '../index.html' },
-      { id: 'browse', label: 'Browse Recipes', href: prefix + 'pages/browse.html' },
-      { id: 'favorites', label: 'Favorites', href: prefix + 'pages/favorites.html' },
-      { id: 'fridge', label: 'Fridge Finder', href: prefix + 'pages/fridge.html' },
-      { id: 'diet-plans', label: 'Diet Plans', href: prefix + 'pages/diet-plans.html' },
-      { id: 'certification', label: 'Cooking Certification', href: prefix + 'pages/cooking-certification.html' },
-      { id: 'about', label: 'About', href: prefix + 'pages/about.html' },
-      { id: 'contact', label: 'Contact', href: prefix + 'pages/contact.html' }
+      { id: 'home', label: 'Home', icon: '🏠', href: isRoot ? 'index.html' : '../index.html' },
+      { id: 'favorites', label: 'Favorites', icon: '⭐', href: prefix + 'pages/favorites.html' },
+      { id: 'fridge', label: 'Fridge Finder', icon: '🧊', href: prefix + 'pages/fridge.html' },
+      { id: 'diet-plans', label: 'Diet Plans', icon: '🥗', href: prefix + 'pages/diet-plans.html' },
+      { id: 'certification', label: 'Cooking Certification', icon: '🎓', href: prefix + 'pages/cooking-certification.html' },
+      { id: 'about', label: 'About', icon: 'ℹ️', href: prefix + 'pages/about.html' },
+      { id: 'contact', label: 'Contact', icon: '✉️', href: prefix + 'pages/contact.html' }
     ];
 
     const navLinks = pages.map(p => {
       const activeClass = p.id === currentPage ? ' active' : '';
-      return `<li><a href="${p.href}" class="nav-link${activeClass}" data-page="${p.id}">${p.label}</a></li>`;
+      return `<li><a href="${p.href}" class="nav-link${activeClass}" data-page="${p.id}"><span class="nav-circle">${p.icon}</span> ${p.label}</a></li>`;
     }).join('');
 
     return `
@@ -38,34 +37,6 @@ const SharedComponents = (function () {
           <ul class="nav-links" id="navLinks">
             ${navLinks}
           </ul>
-          <div class="nav-actions">
-            <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-              <span class="theme-icon">🌙</span>
-            </button>
-            <div class="auth-buttons" id="authButtons">
-              <button class="btn btn-sm btn-secondary" id="loginBtn">Login</button>
-              <button class="btn btn-sm btn-primary" id="signupBtn">Sign Up</button>
-            </div>
-            <div class="user-menu" id="userMenu" style="display:none;">
-              <button class="user-menu-btn" id="userMenuBtn">
-                <span class="user-avatar" id="userAvatar">👤</span>
-                <span class="user-name" id="userName">User</span>
-                <span class="user-arrow">▼</span>
-              </button>
-              <div class="user-dropdown" id="userDropdown" style="display:none;">
-                <div class="user-dropdown-header">
-                  <span class="user-avatar-large" id="userAvatarLarge">👤</span>
-                  <div>
-                    <div class="user-dropdown-name" id="userDropdownName">User Name</div>
-                    <div class="user-dropdown-email" id="userDropdownEmail">user@email.com</div>
-                    <div class="user-dropdown-region" id="userDropdownRegion">Region</div>
-                  </div>
-                </div>
-                <div class="user-dropdown-divider"></div>
-                <button class="user-dropdown-item" id="logoutBtn">🚪 Logout</button>
-              </div>
-            </div>
-          </div>
         </div>
       </nav>
     `;
@@ -83,12 +54,6 @@ const SharedComponents = (function () {
 
   function getModals() {
     return `
-      <div class="modal-overlay" id="authModal">
-        <div class="modal-container auth-modal-container" id="authModalContainer">
-          <button class="modal-close auth-modal-close" id="authModalClose">&times;</button>
-          <div class="modal-body" id="authModalBody"></div>
-        </div>
-      </div>
       <div class="modal-overlay" id="recipeModal">
         <div class="modal-container" id="modalContainer">
           <button class="modal-close" id="modalClose">&times;</button>
@@ -117,38 +82,8 @@ const SharedComponents = (function () {
 
   function initShared(currentPage) {
     injectSharedElements(currentPage);
-    initTheme();
     initMobileMenu();
-    initAuthUI();
-    initDropdown();
     initModalClose();
-  }
-
-  function initTheme() {
-    const themeToggle = document.getElementById('themeToggle');
-    if (!themeToggle) return;
-
-    const saved = localStorage.getItem('zbh_theme');
-    if (saved === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      const icon = themeToggle.querySelector('.theme-icon');
-      if (icon) icon.textContent = '☀️';
-    }
-
-    themeToggle.addEventListener('click', () => {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      if (isDark) {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('zbh_theme', 'light');
-        const icon = themeToggle.querySelector('.theme-icon');
-        if (icon) icon.textContent = '🌙';
-      } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('zbh_theme', 'dark');
-        const icon = themeToggle.querySelector('.theme-icon');
-        if (icon) icon.textContent = '☀️';
-      }
-    });
   }
 
   function initMobileMenu() {
@@ -166,82 +101,6 @@ const SharedComponents = (function () {
         mobileMenuBtn.classList.remove('open');
         navLinks.classList.remove('open');
       });
-    });
-  }
-
-  function initAuthUI() {
-    if (typeof Auth === 'undefined' || !Auth) return;
-    
-    const authButtons = document.getElementById('authButtons');
-    const userMenu = document.getElementById('userMenu');
-    
-    function updateUI() {
-      if (Auth.isLoggedIn()) {
-        if (authButtons) authButtons.style.display = 'none';
-        if (userMenu) userMenu.style.display = 'flex';
-        const user = Auth.getUser();
-        if (user) {
-          const displayName = user.displayName || 'User';
-          const initial = displayName.charAt(0).toUpperCase();
-          const userNameEl = document.getElementById('userName');
-          const userAvatarEl = document.getElementById('userAvatar');
-          const userAvatarLargeEl = document.getElementById('userAvatarLarge');
-          const userDropdownNameEl = document.getElementById('userDropdownName');
-          const userDropdownEmailEl = document.getElementById('userDropdownEmail');
-          if (userNameEl) userNameEl.textContent = displayName;
-          if (userAvatarEl) userAvatarEl.textContent = initial;
-          if (userAvatarLargeEl) userAvatarLargeEl.textContent = initial;
-          if (userDropdownNameEl) userDropdownNameEl.textContent = displayName;
-          if (userDropdownEmailEl) userDropdownEmailEl.textContent = user.email || '';
-        }
-      } else {
-        if (authButtons) authButtons.style.display = 'flex';
-        if (userMenu) userMenu.style.display = 'none';
-      }
-    }
-
-    updateUI();
-    if (Auth.onFavoritesUpdated) {
-      Auth.onFavoritesUpdated(updateUI);
-    }
-
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) {
-      loginBtn.addEventListener('click', () => {
-        if (Auth && Auth.openLogin) Auth.openLogin();
-      });
-    }
-
-    const signupBtn = document.getElementById('signupBtn');
-    if (signupBtn) {
-      signupBtn.addEventListener('click', () => {
-        if (Auth && Auth.openSignup) Auth.openSignup();
-      });
-    }
-
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
-        if (Auth && Auth.logout) Auth.logout();
-      });
-    }
-  }
-
-  function initDropdown() {
-    const userMenuBtn = document.getElementById('userMenuBtn');
-    const userDropdown = document.getElementById('userDropdown');
-    if (!userMenuBtn || !userDropdown) return;
-
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = userDropdown.style.display === 'block';
-      userDropdown.style.display = isOpen ? 'none' : 'block';
-    });
-
-    document.addEventListener('click', (e) => {
-      if (userMenuBtn && !userMenuBtn.contains(e.target)) {
-        userDropdown.style.display = 'none';
-      }
     });
   }
 
@@ -374,9 +233,6 @@ const SharedComponents = (function () {
       }
     }
     localStorage.setItem('zbh_favorites', JSON.stringify(favorites));
-    if (typeof Auth !== 'undefined' && Auth && Auth.isLoggedIn && Auth.isLoggedIn()) {
-      Auth.syncFavorites(favorites);
-    }
     document.dispatchEvent(new CustomEvent('favorites:updated'));
   }
 
@@ -489,10 +345,7 @@ const SharedComponents = (function () {
     getModals,
     injectSharedElements,
     initShared,
-    initTheme,
     initMobileMenu,
-    initAuthUI,
-    initDropdown,
     initModalClose,
     showToast,
     getQueryParam,
