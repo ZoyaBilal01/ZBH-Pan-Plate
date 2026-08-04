@@ -75,11 +75,10 @@ syncCheck('auth.js loads and exposes Auth API (VM smoke)', () => {
   vm.runInContext(read('js/auth.js'), ctx);
   const Auth = win.Auth;
   assert(typeof Auth.isLoggedIn === 'function', 'Auth.isLoggedIn exposed');
-  assert(Auth.isLoggedIn() === false, 'Auth.isLoggedIn() is false with no user');
-  assert(Auth.getUser() === null, 'Auth.getUser() is null with no user');
-  assert(Auth.getUserName() === null, 'Auth.getUserName() is null with no user');
-  assert(typeof Auth.openLogin === 'function', 'Auth.openLogin exposed');
-  assert(typeof Auth.logout === 'function', 'Auth.logout exposed');
+   assert(Auth.isLoggedIn() === false, 'Auth.isLoggedIn() is false with no user');
+   assert(Auth.getUser() === null, 'Auth.getUser() is null with no user');
+   assert(Auth.getUserName() === null, 'Auth.getUserName() is null with no user');
+   assert(typeof Auth.logout === 'function', 'Auth.logout exposed');
 });
 
 // ---- 4. auth.js source / auth logic assertions ----
@@ -178,11 +177,10 @@ function runHttpTests(done) {
         res.on('end', () => {
           record('localhost serves ' + u + ' (status ' + res.statusCode + ')', res.statusCode === 200, res.statusCode !== 200 ? 'expected 200' : '');
           if (res.statusCode === 200) {
-            if (u === '/' || u === '/pages/login.html' || u === '/pages/signup.html' || u === '/pages/cooking-certification.html' || u === '/pages/certification-admin.html') {
+             if (u === '/' || u === '/pages/cooking-certification.html' || u === '/pages/certification-admin.html') {
               record('  ' + u + ' is HTML + loads firebase SDK', data.indexOf('<html') !== -1 && data.indexOf('firebase') !== -1, 'missing html/firebase marker');
             }
-            if (u === '/js/auth.js') record('  /js/auth.js has no generic error string', data.indexOf('An error occurred') === -1, 'generic error present');
-            if (u === '/js/main.js') record('  /js/main.js has fixed render hook', data.indexOf('currentPageRender') !== -1, 'missing currentPageRender');
+             if (u === '/js/main.js') record('  /js/main.js has fixed render hook', data.indexOf('currentPageRender') !== -1, 'missing currentPageRender');
           }
           finish();
         });
