@@ -290,27 +290,90 @@
       fridgeInput.value = '';
     }
 
-    function fridgeMatchScore(recipe) {
-      const ings = (recipe.ingredients || []).map(normalizeIngredient).filter(Boolean);
-      if (!ings.length) return 0;
-      let matched = 0;
+    function fridgeMatchResult(recipe) {
+      const ingredients = recipe.ingredients || [];
       const userSet = new Set(fridgeIngredients.map(normalizeIngredient).filter(Boolean));
-      ings.forEach(ri => {
-        if (userSet.has(ri)) matched++;
-        else {
-          const riTokens = ri.split(/\s+/);
-          let tokenHit = false;
+      let matched = 0;
+      let score = 0;
+      const missing = [];
+
+      ingredients.forEach(ing => {
+        const normIng = normalizeIngredient(ing);
+        if (!normIng) return;
+        let matchedExact = false;
+        let matchedToken = false;
+
+        if (userSet.has(normIng)) {
+          matchedExact = true;
+        } else {
+          const riTokens = normIng.split(/\s+/);
           for (const t of riTokens) {
             if (t.length < 3) continue;
+            let tokenHit = false;
             for (const u of userSet) {
               if (u.includes(t) || t.includes(u)) { tokenHit = true; break; }
             }
-            if (tokenHit) break;
+            if (tokenHit) { matchedToken = true; break; }
           }
-          if (tokenHit) matched += 0.5;
         }
+
+        if (matchedExact) { matched++; score += 1; }
+        else if (matchedToken) { matched++; score += 0.5; }
+        else { missing.push(ing); }
       });
-      return matched;
+
+      return { score, matched, missing };
+    }
+
+    function buildFridgeCard(recipe, missing) {
+      const card = SharedComponents.createRecipeCard(recipe, fridgeIngredients);
+      const body = card.querySelector('.recipe-card-body');
+      if (!body) return card;
+
+      const nutrition = recipe.nutrition || {};
+      const nutriKeys = ['protein', 'carbs', 'fat'];
+      const hasNutrition = nutriKeys.some(k => nutrition[k] && nutrition[k] !== '-');
+      if (hasNutrition) {
+        const nutriBar = document.createElement('div');
+        nutriBar.className = 'fridge-card-meta';
+        nutriBar.innerHTML =
+          '<span>💪 ' + (nutrition.protein || '-') + '</span>' +
+          '<span>🍚 ' + (nutrition.carbs || '-') + '</span>' +
+          '<span>🧈 ' + (nutrition.fat || '-') + '</span>';
+        body.appendChild(nutriBar);
+      }
+
+      if (missing && missing.length) {
+        const missBar = document.createElement('div');
+        missBar.className = 'fridge-missing-bar';
+        missBar.innerHTML = '<span class="fridge-missing-label">🛒 Missing ingredients:</span>';
+        const list = document.createElement('span');
+        list.className = 'fridge-missing-list';
+        missing.forEach(m => {
+          const tag = document.createElement('span');
+          tag.className = 'fridge-missing-tag';
+          tag.textContent = '❌ ' + m;
+          list.appendChild(tag);
+        });
+        missBar.appendChild(list);
+        body.appendChild(missBar);
+      }
+
+      return card;
+    }
+
+    function createFridgeSection(title, items, showMissing) {
+      const section = document.createElement('div');
+      section.className = 'fridge-results-section';
+      const heading = document.createElement('h2');
+      heading.className = 'fridge-results-title';
+      heading.textContent = title;
+      section.appendChild(heading);
+      const grid = document.createElement('div');
+      grid.className = 'recipe-grid';
+      items.forEach(x => grid.appendChild(buildFridgeCard(x.recipe, showMissing ? x.missing : [])));
+      section.appendChild(grid);
+      return section;
     }
 
     function renderFridgeResults() {
@@ -319,17 +382,35 @@
         fridgeEmpty.style.display = 'none';
         return;
       }
-      const all = SharedComponents.getRecipes();
-      const scored = all.map(r => ({ recipe: r, score: fridgeMatchScore(r) }))
-        .filter(x => x.score > 0)
-        .sort((a, b) => b.score - a.score);
 
-      if (!scored.length) {
-        fridgeEmpty.style.display = 'block';
-        return;
-      }
+      const all = SharedComponents.getRecipes();
+      const results = all.map(r => {
+        const res = fridgeMatchResult(r);
+        return { recipe: r, score: res.score, matched: res.matched, missing: res.missing };
+      }).filter(x => x.score > 0);
+
+      const exact = results.filter(x => x.missing.length === 0);
+      const partial = results.filter(x => x.missing.length > 0);
+
+      exact.sort((a, b) => b.matched - a.matched || b.score - a.score);
+      partial.sort((a, b) => a.missing.length - b.missing.length || b.matched - a.matched || b.score - a.score);
+
       fridgeEmpty.style.display = 'none';
-      scored.forEach(x => fridgeRecipeGrid.appendChild(SharedComponents.createRecipeCard(x.recipe, fridgeIngredients)));
+
+      let anySection = false;
+
+      if (exact.length) {
+        fridgeRecipeGrid.appendChild(createFridgeSection('✅ You Can Make These Now', exact, false));
+        anySection = true;
+      }
+      if (partial.length) {
+        fridgeRecipeGrid.appendChild(createFridgeSection('🛒 You Need These Extra Ingredients', partial, true));
+        anySection = true;
+      }
+
+      if (!anySection) {
+        fridgeEmpty.style.display = 'block';
+      }
     }
 
     fridgeAddBtn.addEventListener('click', () => fridgeAddIngredient(fridgeInput.value));

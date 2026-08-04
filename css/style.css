@@ -2548,6 +2548,80 @@ body {
   opacity: 0.85;
 }
 
+.fridge-results {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.fridge-results-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fridge-results-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.fridge-card-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.fridge-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fridge-missing-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.fridge-missing-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fridge-missing-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fridge-missing-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 50px;
+  background: var(--surface-alt);
+  color: #c62828;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .fridge-missing-tag {
+  background: #3a1a1f;
+  color: #fca5a5;
+}
+
 /* -------------------- Diet Plans -------------------- */
 .diet-plans-container {
   display: flex;
