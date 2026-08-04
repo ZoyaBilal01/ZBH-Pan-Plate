@@ -169,7 +169,7 @@ addRecipe({ name: "Curry", cuisine: "International", category: "Curry",
 
 addRecipe({ name: "Pakora", cuisine: "Pakistani", category: "Appetizer",
   description: "Crispy, spiced chickpea fritters with herbs, fried to golden perfection.",
-  ingredients: ["Chickpea Flour","Onion","Potato","Spinach","Coriander","Green Chili","Cumin","Salt","Oil"],
+  ingredients: ["2 cups Chickpea Flour", "2 large Onions", "2 Potatoes", "1 cup Spinach", "2 tbsp Coriander", "2 Green Chilies", "1 tsp Cumin", "1.5 tsp Salt", "Oil for frying"],
   prep: "15 min", cook: "15 min", servings: 4, calories: 320, difficulty: "Easy",
   steps: ["Mix chickpea flour with spices and water to make a thick batter.","Add sliced onion, potato, spinach and chilli.","Drop spoonfuls into hot oil.","Fry until crisp and golden on both sides."],
   tips: ["Don't make the batter too thin or the pakoras will absorb oil."],
